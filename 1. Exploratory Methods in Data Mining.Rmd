@@ -1,0 +1,482 @@
+---
+title: "Metodos Exploratorios en Mineria de Datos"
+author: "Fatima Uriarte"
+date: "April 15, 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+### Data: Consumo Promedio de Proteinas en Gramos en Europa
+```{r}
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Personal SBS/Cursos/1. Curso Experto en Mineria de Datos - PROMIDAT/4. Metodos Avanzados en Mineria de Datos/Clase 1/Tarea1")
+Datos <- read.table('DatosTarea1.csv', header=TRUE, sep=',', dec='.', row.names=1, fileEncoding = "latin1") 
+
+```
+###  ACP 
+```{r}
+suppressMessages(library(FactoMineR))
+res<-PCA(Datos, scale.unit=TRUE, ncp=5, graph = FALSE)
+```
+#### a. Eliminando individuos y variables mal representados (coseno cuadrado menor al 10%).
+
+```{r}
+#Individuos mal representados
+cos2.ind<-(res$ind$cos2[,1]+res$ind$cos2[,2])*100
+cos2.ind
+
+```
+#####Polonia es el unico individuo mal representado.
+```{r}
+#Variables mal representados
+cos2.var<-(res$var$cos2[,1]+res$var$cos2[,2])*100
+cos2.var
+
+```
+#####No hay ninguna variable mal representada.
+
+
+#### b. Cluster del plano principal
+```{r, fig.align='center'}
+modelo <- prcomp(Datos,scale. = TRUE,center = TRUE)
+plot(res, axes=c(1, 2), choix="ind",col.ind="red",new.plot=TRUE,select="cos2 0.1")
+```
+
+#####A la vista se observan tres clusteres, no obstante se deberia hacer un analisis de cluster jerarquico para determinar exactamente el numero de clusters.Se observa que existen similitudes en los reg?menes alimenticios en pa?ses que se encuentran relativamente cerca.
+
+
+#### c. En el circulo de correlacion determine la correlacion entre las variables.
+```{r, fig.align='center'}
+plot(res, axes=c(1, 2), choix="var",col.var="blue",new.plot=TRUE,select="cos2 0.1")
+```
+
+#####Existen variables que estan altamente correlacionadas como X2 y X4. A su vez tambien existen variables que no muestran relacion como carne de X1 y X5. Por su parte, tambien existen variables que muestran correlaciones negativas fuertes como X8 y X1.
+
+#### d. Explique la formacion de los clusteres basado en la sobre-posicion del circulo y el plano.
+```{r, fig.align='center'}
+biplot(modelo)
+
+```
+
+
+#####Paises como Alabania, Bulgaria, Yugoslavia, Hungria, URSS, Italia y Grecia consumen X6 y X8 principalmente, mientras que Francia, Alemania, Belgica consumen X5 y X7. El resto de paises consumen otros productos.
+
+### 1.2 Investigue sobre las funciones fviz_pca_ind, fviz_pca_var y fviz_pca_biplot del paquete factoextra y realice los graficos anteriores usando estas tres funciones.
+```{r, fig.align='center'}
+library(ggplot2)
+library(factoextra)
+fviz_pca_ind(res, axes = c(1, 2), geom = c("point", "text"), repel = FALSE,
+             habillage = "none", palette = NULL, addEllipses = FALSE,
+             col.ind = "black", col.ind.sup = "blue", alpha.ind = 1,
+             select.ind = list(name = NULL, cos2 = NULL, contrib = NULL))
+fviz_pca_var(res, axes = c(1, 2), geom = c("arrow", "text"), repel = FALSE,
+             col.var = "black", alpha.var = 1, col.quanti.sup = "blue",
+             col.circle = "grey70", select.var = list(name = NULL, cos2 = NULL, contrib= NULL))
+fviz_pca_biplot(res, axes = c(1, 2), geom = c("point", "text"),
+                col.ind = "black", col.var = "steelblue", label = "all",
+                invisible = "none", repel = FALSE, habillage = "none", palette = NULL,
+                addEllipses = FALSE, title = "PCA - Biplot")
+```
+
+
+###1.3 Compare el Plano Principal del ejercicio anterior con el mapa de Europa. Que conclusion puede sacar
+
+Se observa que existen similitudes en los reg?menes alimenticios en pa?ses que se encuentran relativamente cerca y que si rotamos un poco el grafico podemos obtener el mapa de Europa.
+
+
+## Pregunta 2
+###Data: Evaluacion productos de Amazon
+```{r, fig.align='center'}
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Personal SBS/Cursos/1. Curso Experto en Mineria de Datos - PROMIDAT/4. Metodos Avanzados en Mineria de Datos/Clase 1/Tarea1")
+Datos <- read.table('EjemploAlgoritmosRecomendacion.csv', header=TRUE, sep=';',dec=',',row.names=1)
+head(Datos)
+```
+#### a. Efectue un Analisis en Componentes Principales para estos datos usando Biplots y la funcion prcomp del paquete stats.
+```{r, fig.align='center'}
+suppressMessages(library(FactoMineR))
+modelo <- prcomp(Datos,scale. = TRUE,center = TRUE)
+modelo
+biplot(modelo)
+```
+
+
+#### b. Grafique el Biplot anterior usando fviz pca biplot() del paquete factoextra.
+```{r, fig.align='center'}
+library(ggplot2)
+library(factoextra)
+fviz_pca_biplot(modelo, axes = c(1, 2), geom = c("point", "text"),
+                col.ind = "black", col.var = "steelblue", label = "all",
+                invisible = "none", repel = FALSE, habillage = "none", palette = NULL,
+                addEllipses = FALSE, title = "PCA - Biplot")
+```
+
+
+#### c. Repita el ejercicio anterior usando el paquete FactoMineR, elimine de los graficos los individuos mal representados
+```{r, fig.align='center'}
+res<-PCA(Datos, scale.unit=TRUE, ncp=5, graph = FALSE)
+#Individuos mal representados (menor a 20%)
+cos2.ind<-(res$ind$cos2[,1]+res$ind$cos2[,2])*100
+cos2.ind
+plot(res, axes=c(1, 2), choix="ind",col.ind="red",new.plot=TRUE,select="cos2 0.2")
+#Variables mal representados (menor a 55%)
+cos2.var<-(res$var$cos2[,1]+res$var$cos2[,2])*100
+cos2.var
+plot(res, axes=c(1, 2), choix="var",col.var="blue",new.plot=TRUE,select="cos2 0.55")
+```
+
+
+#### d. Repita los graficos anteriores con las funciones fviz pca ind(...) y fviz pca var(...).
+```{r, fig.align='center'}
+fviz_pca_ind(res, axes = c(1, 2), geom = c("point", "text"), repel = FALSE,
+             habillage = "none", palette = NULL, addEllipses = FALSE,
+             col.ind = "black", col.ind.sup = "blue", alpha.ind = 1,
+             select.ind = list(name = NULL, cos2= 0.2, contrib = NULL))
+fviz_pca_var(res, axes = c(1, 2), geom = c("arrow", "text"), repel = FALSE,
+             col.var = "black", alpha.var = 1, col.quanti.sup = "blue",
+             col.circle = "grey70", select.var = list(name = NULL, cos2 = 0.55, contrib= NULL))
+```
+
+
+#### e. Ejecute un Clustering Jerarquico con la agregacion del Salto Maximo, Salto Minimo, Promedio y Ward. Guarde la tabla de datos en el archivo AlgoritmosRecomendacion2.csv con el cluster al que pertenece cada individuo para el caso de la agregacion de Ward.
+```{r, fig.align='center'}
+#Salto Maximo
+modelo_maximo <- hclust(dist(Datos),method = "complete")
+plot(modelo_maximo)
+#Salto Minimo
+modelo_minimo <- hclust(dist(Datos),method = "single")
+plot(modelo_minimo)
+#Salto Promedio
+modelo_promedio <- hclust(dist(Datos),method = "average")
+plot(modelo_promedio)
+#Salto Ward
+modelo_ward <- hclust(dist(Datos),method = "ward.D2")
+plot(modelo_ward)
+#Creamos variable con nombre del cluster k=4
+Grupo<-cutree(modelo_ward,k=4)
+NDatos<-cbind(Datos,Grupo)
+head(NDatos, n=10)
+
+```
+
+
+#### f.Interprete los resultados del ejercicio anterior para el caso de agregacion de Ward usando graficos de barras y graficos tipo estrella.
+```{r, fig.align='center'}
+library(rattle)
+centros<-centers.hclust(Datos,modelo_ward,nclust=4,use.median=FALSE)
+centros
+rownames(centros)<-c("Cluster 1","Cluster 2","Cluster 3", "Cluster 4")
+barplot(centros[1,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[2,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[3,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[4,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[1,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[2,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[3,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[4,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(t(centros),beside=TRUE,col=c(1,2,3,4,5,6,7,8,9))
+
+rownames(centros)<-c("Cluster 1","Cluster 2","Cluster 3","Cluster 4")
+centros<-as.data.frame(centros)
+maximos<-apply(centros,2,max)
+minimos<-apply(centros,2,min)
+centros<-rbind(minimos,centros)
+centros<-rbind(maximos,centros)
+centros
+library(fmsb)
+radarchart(centros,maxmin=TRUE,axistype=4,axislabcol="slategray4",
+           centerzero=FALSE,seg=8,cglcol="gray67",
+           pcol=c("green","blue","red", "gray"),
+           plty=1,
+           plwd=5,
+           title="Comparaci?n de cl?steres")
+legenda <-legend(1.5,1, legend=c("Cluster 1","Cluster 2","Cluster 3","Cluster 4"),
+                 seg.len=-1.4,
+                 title="Cl?steres",
+                 pch=21, 
+                 bty="n" ,lwd=3, y.intersp=1, horiz=FALSE,
+                 col=c("green","blue","red", "gray"))
+```
+
+
+##### El cl?ster 1 es el que eval?a m?s bajo casi todos los factores lo que indica que es el grupo de consumidores de Amazon m?s disconforme, por lo que la empresa podr?a implementar ciertas estrategias de retenci?n para estos clientes. En contraste, el cl?ster 3 evalu? muy bien los aspectos numero de estrellas, calidad del producto, servicio retorno, valor educativo, imagen producto y durabilidad; por lo que se podr?a decir que es el cl?ster m?s satisfecho con el servicio de Amazon. En tanto, los clusters 2 y 4 agrupan a los clientes promedio que evaluaron muy bien los aspectos calidad del producto, durabilidad, n?mero de estrellas y velocidad de entrega; no estando satisfechos con el precio y el tama?o del paquete.
+
+#### g.Construya un clustering jerarquico sobre las componentes principales del ACP.
+```{r, fig.align='center'}
+suppressMessages(library(FactoMineR))
+res<-PCA(Datos , scale.unit=TRUE, ncp=5, graph = FALSE)
+res.hcpc<-HCPC(res ,nb.clust=-1,consol=TRUE,min=3,max=3,graph=FALSE)
+res.hcpc <- HCPC(res, nb.clust = -1, consol = TRUE, min = 4, max = 4, graph = FALSE)
+plot.HCPC(res.hcpc, choice="bar")
+plot.HCPC(res.hcpc, choice="map")
+plot.HCPC(res.hcpc, choice="3D.map", angle=60)
+```
+
+
+#### h. Ejecute el metodo k????medias con iter.max = 200 para k = 4, luego verifique el Teorema de Fisher para este ejemplo.
+```{r, fig.align='center'}
+grupos<-kmeans(Datos, 4,iter.max=200) 
+grupos
+# Verificaci?n del Teorema de Fisher
+grupos$totss==grupos$tot.withinss+grupos$betweenss  
+```
+
+
+#### i. Interprete los resultados del ejercicio anterior usando graficos de barras y graficos tipo estrella.
+```{r, fig.align='center'}
+library(rattle)
+modelo_ward <- hclust(dist(Datos),method = "ward.D2")
+centros<-grupos$centers
+rownames(centros)<-c("Cluster 1","Cluster 2","Cluster 3", "Cluster 4")
+barplot(centros[1,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[2,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[3,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[4,],col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[1,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[2,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[3,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(centros[4,],beside=TRUE,col=c(1,2,3,4,5,6,7,8,9),las=2)
+barplot(t(centros),beside=TRUE,col=c(1,2,3,4,5,6,7,8,9))
+
+rownames(centros)<-c("Cluster 1","Cluster 2","Cluster 3","Cluster 4")
+centros<-as.data.frame(centros)
+maximos<-apply(centros,2,max)
+minimos<-apply(centros,2,min)
+centros<-rbind(minimos,centros)
+centros<-rbind(maximos,centros)
+centros
+library(fmsb)
+radarchart(centros,maxmin=TRUE,axistype=4,axislabcol="slategray4",
+           centerzero=FALSE,seg=8,cglcol="gray67",
+           pcol=c("green","blue","red", "gray"),
+           plty=1,
+           plwd=5,
+           title="Comparaci?n de cl?steres")
+legenda <-legend(1.5,1, legend=c("Cluster 1","Cluster 2","Cluster 3","Cluster 4"),
+                 seg.len=-1.4,
+                 title="Cl?steres",
+                 pch=21, 
+                 bty="n" ,lwd=3, y.intersp=1, horiz=FALSE,
+                 col=c("green","blue","red", "gray"))
+```
+
+
+#### j. Usando 50 ejecuciones del metodo kmedias as con iter.max = 200 grafique el codo de Jambu
+```{r, fig.align='center'}
+InerciaIC<-rep(0,50)
+for(k in 1:50) {
+  grupos<-kmeans(Datos,k,nstart=25,iter.max=200)
+  InerciaIC[k]<-grupos$tot.withinss
+}
+plot(InerciaIC,col="blue",type="b")
+```
+
+
+
+## Pregunta 3
+
+###Data: Tarjeta de credito
+
+```{r, fig.align='center'}
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Personal SBS/Cursos/1. Curso Experto en Mineria de Datos - PROMIDAT/4. Metodos Avanzados en Mineria de Datos/Clase 1/Tarea1")
+Datos <- read.table('DataTC.csv', header=TRUE, sep=',',dec='.')
+head(Datos)
+str(Datos)
+```
+### 3.1 Explique de que se trata la base de datos
+
+#### Se utilizar? una base de datos que consta de siete variables medidas para 100 deudores de tarjeta de credito. Las definiciones de las variables se presentan a continuaci?n.
+
+Variable      | Definicion
+------------- | ----------------------------------------------------------------------
+Ingreso       | Ingreso que percib?an los deudores en el momento de otorgamiento de la tarjeta.
+Edad          | Diferencia entre la fecha de nacimiento y la fecha actual.
+Sexo          | Sexo del deudor. Adopta el valor de 1 si es hombre y 0 si es mujer.
+TEA           | Tasa de inter?s efectiva de la tarjeta de cr?dito en la modalidad de compras.
+Linea         | Valor del cr?dito permanente que puede ser usado en cualquier momento.
+Saldo prom    | Saldo promedio de cr?ditos de consumo en otras entidades del SF.
+N TC          | N?mero de Tarjetas de Cr?dito que posee el deudor.
+Incumplio     | Adopta el valor de 1 si el deudor tiene un incumplimiento .
+
+
+### 3.2 Realice un cluster jerarquico usando la funcion daysi. Interpretacion en base a las variables cualitativas y cuantitativas
+```{r, fig.align='center'}
+library(cluster)
+library(rattle)
+# Convert "sexo" and "incumplio" to factors
+Datos$sexo <- as.factor(Datos$sexo)
+Datos$incumplio <- as.factor(Datos$incumplio)
+D<-daisy(Datos, metric = "euclidean")
+jer<-hclust(D, method = "complete")
+plot(jer)
+rect.hclust(jer, k = 4, border = "red")
+# Interpretacion variables cuantitativas
+centros<-centers.hclust(Datos[,-c(4,8)],jer,nclust=4,use.median=FALSE)
+centros
+rownames(centros)<-c("Cluster 1","Cluster 2","Cluster 3","Cluster 4")
+centros<-as.data.frame(centros)
+maximos<-apply(centros,2,max)
+minimos<-apply(centros,2,min)
+centros<-rbind(minimos,centros)
+centros<-rbind(maximos,centros)
+centros
+
+library(fmsb) # Paquete para usar radarchart
+radarchart(centros,maxmin=TRUE,axistype=4,axislabcol="slategray4",
+           centerzero=FALSE,seg=8,cglcol="gray67",
+           pcol=c("green","blue","red", "gray"),
+           plty=1,
+           plwd=5,
+           title="Comparaci?n de cl?steres")
+
+legenda <-legend(1.5,1, legend=c("Cluster 1","Cluster 2","Cluster 3","Cluster 4"),
+                 seg.len=-1.4,
+                 title="Cl?steres",
+                 pch=21, 
+                 bty="n" ,lwd=3, y.intersp=1, horiz=FALSE,
+                 col=c("green","blue","red", "gray"))
+
+
+# Interpretacion de variables cualitativas
+grupo <- cutree(jer, k = 4)
+NDatos <- cbind(Datos, grupo)
+cluster <- NDatos$grupo
+
+sel.cluster1 <- match(cluster, 1, 0)
+sel.cluster1[1:10]
+Datos.Cluster1 <- NDatos[sel.cluster1 > 0,]
+dim(Datos.Cluster1)
+
+sel.cluster2 <- match(cluster, 2, 0)
+Datos.Cluster2 <- NDatos[sel.cluster2 > 0,]
+dim(Datos.Cluster2)
+
+sel.cluster3 <- match(cluster, 3, 0)
+Datos.Cluster3 <- NDatos[sel.cluster3 > 0,]
+dim(Datos.Cluster3)
+
+sel.cluster4 <- match(cluster, 4, 0)
+Datos.Cluster4 <- NDatos[sel.cluster4 > 0,]
+dim(Datos.Cluster4)
+
+plot(Datos$sexo, col = c(4, 6), las = 2, main = "variable sexo", xlab = "Todos los Datos")
+
+plot(Datos.Cluster1$sexo, col = c(4, 6), las = 2, main = "Variable sexo", xlab = "Cluster 1")
+plot(Datos.Cluster2$sexo, col = c(4, 6), las = 2, main = "Variable sexo", xlab = "Cluster 2")
+plot(Datos.Cluster3$sexo, col = c(4, 6), las = 2, main = "Variable sexo", xlab = "Cluster 3")
+plot(Datos.Cluster4$sexo, col = c(4, 6), las = 2, main = "Variable sexo", xlab = "Cluster 4")
+
+plot(Datos$incumplio, col = c(4, 6), las = 2, main = "Variable incumplio", xlab = "Todos los Datos")
+
+plot(Datos.Cluster1$incumplio, col = c(4, 6), las = 2, main = "Variable incumplio", xlab = "Cluster 1")
+plot(Datos.Cluster2$incumplio, col = c(4, 6), las = 2, main = "Variable incumplio", xlab = "Cluster 2")
+plot(Datos.Cluster3$incumplio, col = c(4, 6), las = 2, main = "Variable incumplio", xlab = "Cluster 3")
+plot(Datos.Cluster4$incumplio, col = c(4, 6), las = 2, main = "Variable incumplio", xlab = "Cluster 4")
+
+```
+##### Variables cuantitativas: El cluster 4 tiene los ingresos mas elevados, por lo que tambien registran un elevado numero de tarjetas de credito y saldo de credito, asimismo su tasa de interes es baja debido a su buen perfil de riesgo. El cluster 2, por su parte, tiene los ingresos mas reducidos por lo que registra tasas de interes altas en relacion con el resto de clusters. Los otros dos clusters estan en el medio aproximadamente.
+
+##### Variables cualitativas: Los clusters 1 y 4 estan compuestos por hombres unicamente y el cluster 3 por mujeres unicamente . Asimismo el cluster 1 registro incumplimiento en el pago de sus tarjetas de creditos, mientras que el resto de clusters no lo hicieron.
+
+### 3.3 Ejecute un ACP mediante un escalamiento multidimensional
+```{r, fig.align='center'}
+D<-daisy(Datos, metric = "euclidean")
+res <- cmdscale(D,eig=TRUE, k=2) # k es el n?mero de componentes a usas
+# Plotear la soluci?n
+x <- res$points[,1]
+y <- res$points[,2]
+plot(x, y, xlab="Componente 1", ylab="Componente 2",main="MDS", type="n")
+text(x, y, labels = row.names(Datos), cex=.7) 
+
+```
+
+## Pregunta 4
+
+###Data: Dow Jones
+```{r, fig.align='center'}
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Personal SBS/Cursos/1. Curso Experto en Mineria de Datos - PROMIDAT/4. Metodos Avanzados en Mineria de Datos/Clase 1/Tarea1")
+Datos <- read.table('DatosTareaYahhoFinance.csv', header=TRUE, sep=',',dec='.',row.names=1)
+head(Datos)
+library(FactoMineR)
+res<-PCA(Datos, scale.unit=TRUE, ncp=5, graph = FALSE)
+
+```
+### 4.1 Elimine individuos y variables mal representados
+```{r, fig.align='center'}
+#Individuos mal representados (menor a 10%)
+cos2.ind<-(res$ind$cos2[,1]+res$ind$cos2[,2])*100
+cos2.ind
+
+#Variables mal representados (menor a 10%)
+cos2.var<-(res$var$cos2[,1]+res$var$cos2[,2])*100
+cos2.var
+```
+
+
+### 4.2 En el plano principal encuentre los clusteres
+```{r, fig.align='center'}
+plot(res, axes=c(1, 2), choix="ind",col.ind="red",new.plot=TRUE,select="cos2 0.1")
+
+```
+##### De acuerdo al grafico se observan aproximadamente dos clusteres.
+
+
+### 4.3 En el circulo de correlacion, determine la correlacion entre las variables
+```{r, fig.align='center'}
+plot(res, axes=c(1, 2), choix="var",col.var="blue",new.plot=TRUE,select="cos2 0.1")
+
+```
+
+##### El c?rculo de correlaci?n registra una inercia es de 71,43%. Asimismo, se observa que las variables AXP y MRK no est?n perfectamente representadas por lo que las conclusiones acerca de las correlaciones mirando ?nicamente el c?rculo de correlaci?n pueden llevar a equivocaciones. La mayor?a de variables muestran una correlaci?n positiva por su cercan?a, no obstante, variables como BAC y MCD muestran una correlaci?n negativa.
+
+### 4.4 Ejecute un ACP mediante un escalamiento multidimensional
+```{r, fig.align='center'}
+library(factoextra)
+fviz_pca_ind(res, axes = c(1, 2), geom = c("point", "text"), repel = FALSE,
+             habillage = "none", palette = NULL, addEllipses = FALSE,
+             col.ind = "black", col.ind.sup = "blue", alpha.ind = 1,
+             select.ind = list(name = NULL, cos2= 0.1, contrib = NULL))
+fviz_pca_var(res, axes = c(1, 2), geom = c("arrow", "text"), repel = FALSE,
+             col.var = "black", alpha.var = 1, col.quanti.sup = "blue",
+             col.circle = "grey70", select.var = list(name = NULL, cos2 = 0.1, contrib= NULL))
+fviz_pca_biplot(res, axes = c(1, 2), geom = c("point", "text"),
+                col.ind = "black", col.var = "steelblue", label = "all",
+                invisible = "none", repel = FALSE, habillage = "none", palette = NULL,
+                addEllipses = FALSE,  cos2 = 0.1, title = "PCA - Biplot")
+
+
+```
+
+### 4.5 Que se observa en el plano principal y como se interpreta
+
+##### El cl?ster que muestra las fechas asociadas al inicio del a?o 2010 muestra que las acciones de compa??as como CAT, MCD e IBM (compa??as del cuadrante n?mero cuatro) no les fue bien en ese periodo. En contraste con el cl?ster de fechas del final de 2010 en donde a esas compa??as les fue bien. Por su parte, las fechas de mediados de 2010 muestran que a las compa??as como GE, WMT y XOM no registraron precios elevados de sus acciones.
+
+## Pregunta 5
+
+###Data: Eurodist
+```{r, fig.align='center'}
+eurocitiesD.matriz <- as.matrix(eurodist)
+```
+### 4.1 Ejecute un escalomiento multidimensional
+```{r, fig.align='center'}
+# cmdscale ejecuta el ACP (MDS) pero desde la matriz de distacias
+res <- cmdscale(eurodist,eig=TRUE, k=2) # k es el n?mero de componentes a usas
+
+# Plotear la soluci?n
+x <- res$points[,1]
+y <- res$points[,2]
+plot(x, y, xlab="Componente 1", ylab="Componente 2",main="MDS", type="n")
+text(x, y, labels = row.names(eurocitiesD.matriz), cex=.7) 
+
+# Rotar la soluci?n
+x <- -x
+y <- -y
+plot(x, y, xlab="Componente 1", ylab="Componente 2",main="MDS", type="n")
+text(x, y, labels = row.names(eurocitiesD.matriz), cex=.7) 
+
+```
+
+##### Si rotamos un poco el resultado podemos ver que se parece al mapa de Europa.

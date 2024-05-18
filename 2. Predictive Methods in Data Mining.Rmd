@@ -1,0 +1,665 @@
+---
+title: "Tarea_2 Metodos Avanzados en Mineria de Datos"
+author: "Fatima Uriarte"
+date: "June 3, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Pregunta 1
+
+###Data: Spam Data
+```{r, fig.align='center'}
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 2/Tarea2")
+
+datos <- read.table('SpamData.csv', header=TRUE, sep=';',dec='.') 
+
+```
+### Tabla de aprendizaje y testing
+```{r, fig.align='center'}
+#Tabla de testing y aprendizaje
+N<-dim(datos)[1]
+N
+muestra <- sample(1:N,N*0.7)
+taprendizaje <- datos[muestra,]
+ttesting <- datos[-muestra,]
+```
+###M?todo de los K vecinos m?s cercanos
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+modelo_k<-train.kknn(as.factor(Tipo) ~ .,data=taprendizaje,kmax=57)
+prediccion_k<-predict(modelo_k,ttesting[,-58])
+## Matriz de Confusion
+MC_k<-table(ttesting[,58],prediccion_k)
+MC_k
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_k)))/sum(MC_k)
+acierto
+error<-1-acierto
+error
+```
+###M?todo de Bayes
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_bayes <- naiveBayes(Tipo~.,data=taprendizaje)
+prediccion_bayes <- predict(modelo_bayes, ttesting[,-58])
+## Matriz de Confusion
+MC_bayes<-table(ttesting[,58],prediccion_bayes)
+MC_bayes
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_bayes)))/sum(MC_bayes)
+acierto
+error<-1-acierto
+error
+```
+###M?quinas de Soporte Vectorial
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_msv <- svm(as.factor(Tipo)~., data = taprendizaje, kernel = "linear")
+prediccion_msv <- predict(modelo_msv,ttesting)
+## Matriz de Confusion
+MC_msv<-table(ttesting[,58],prediccion_msv)
+MC_msv
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_msv)))/sum(MC_msv)
+acierto
+error<-1-acierto
+error
+```
+###Arboles de decision
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(rpart.plot)))
+modelo_arbol <- rpart(Tipo~.,data=datos)
+plot(modelo_arbol)
+text(modelo_arbol)
+prediccion_arbol<-predict(modelo_arbol,ttesting,type='class')
+## Matriz de Confusion
+MC_arbol<-table(ttesting[,58],prediccion_arbol)
+MC_arbol
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_arbol)))/sum(MC_arbol)
+acierto
+error<-1-acierto
+error
+```
+###Bosques Aleatorios
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(randomForest)))
+modelo_bosques<-randomForest(as.factor(Tipo)~.,data=taprendizaje,importance=TRUE)
+prediccion_bosques<-predict(modelo_bosques, ttesting[,-58])
+## Matriz de Confusion
+MC_rf<-table(ttesting[,58],prediccion_bosques)
+MC_rf
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_rf)))/sum(MC_rf)
+acierto
+error<-1-acierto
+error
+```
+###M?todos de Potenciaci?n - Boosting
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(ada)))
+modelo_potenciacion<-ada(Tipo~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+prediccion_potenciacion<-predict(modelo_potenciacion, ttesting[,-58])
+## Matriz de Confusion
+MC_boost<-table(ttesting[,58],prediccion_potenciacion)
+MC_boost
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_boost)))/sum(MC_boost)
+acierto
+error<-1-acierto
+error
+```
+###Redes Neuronales
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(nnet)))
+modelo_RN<-nnet(as.factor(Tipo)~.,data=taprendizaje,size = 4, rang = 0.1,decay = 5e-4, maxit = 200,trace=FALSE)
+modelo_RN
+prediccion_RN<-predict(modelo_RN, ttesting[,-58],type = "class")
+## Matriz de Confusion
+MC_RN<-table(ttesting[,58],prediccion_RN)
+MC_RN
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_RN)))/sum(MC_RN)
+acierto
+error<-1-acierto
+error
+```
+###Indices - Matriz de Confusion
+```{r, fig.align='center'}
+matriz_confusion <- function(X) {
+  precision <-  (X[1,1]+X[2,2])/(X[1,1]+X[1,2]+X[2,2]+X[2,1])
+  precision_positiva <-  (X[1,1]+X[2,2])/(X[1,1]+X[1,2]+X[2,2]+X[2,1])
+  precision_negativa <-  (X[2,2])/(X[2,2]+X[2,1])
+  falsos_positivos <-  (X[1,2])/(X[1,1]+X[1,2])
+  falsos_negativos <-  (X[2,1])/(X[2,2]+X[2,1])
+  resultados <-list(precision = precision, precision_positiva = precision_positiva,precision_negativa = precision_negativa, falsos_positivos = falsos_positivos,falsos_negativos = falsos_negativos) 
+  return(resultados)
+}
+
+A <- matrix(c(55,24,21,16),2,2)
+A
+matriz_confusion(A)
+
+```
+###Indices - Matriz de Confusion (Dataframe)
+```{r, fig.align='center'}
+matriz_confusion1 <- function(DF) {
+  precision <-  (DF[1,1]+DF[2,2])/(DF[1,1]+DF[1,2]+DF[2,2]+DF[2,1])
+  precision_positiva <-  (DF[2,2])/(DF[2,2]+DF[2,1])
+  precision_negativa <-  (DF[1,1])/(DF[1,2]+DF[1,1])
+  falsos_positivos <-  (DF[1,2])/(DF[1,1]+DF[1,2])
+  falsos_negativos <-  (DF[2,1])/(DF[2,2]+DF[2,1])
+  resultados <-list(precision = precision, precision_positiva = precision_positiva,precision_negativa = precision_negativa, falsos_positivos = falsos_positivos,falsos_negativos = falsos_negativos) 
+  return(resultados)
+}
+matriz_confusion1(MC_arbol)
+matriz_confusion1(MC_bayes)
+matriz_confusion1(MC_boost)
+matriz_confusion1(MC_k)
+matriz_confusion1(MC_msv)
+matriz_confusion1(MC_rf)
+matriz_confusion1(MC_RN)
+```
+
+## Pregunta 2
+
+###Data: Ingresos
+```{r, fig.align='center'}
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 2/Tarea2")
+datos <- read.table('DatosIngresos.csv', header=TRUE, sep=';',dec='.') 
+# Recodifica las variables como cualitativas
+datos$workclass <- as.factor(datos$workclass)
+datos$education <- as.factor(datos$education)
+datos$marital.status <- as.factor(datos$marital.status)
+datos$occupation <- as.factor(datos$occupation)
+datos$relationship <- as.factor(datos$relationship)
+datos$race <- as.factor(datos$race)
+datos$sex <- as.factor(datos$sex)
+datos$native.country <- as.factor(datos$native.country)
+datos$Income <- as.factor(datos$Income)
+
+
+```
+### Tabla de aprendizaje y testing
+```{r, fig.align='center'}
+#Tabla de testing y aprendizaje
+N<-dim(datos)[1]
+N
+muestra <- sample(1:N,N*0.7)
+taprendizaje <- datos[muestra,]
+ttesting <- datos[-muestra,]
+```
+
+###M?todo de los K vecinos m?s cercanos
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+modelo_k<-train.kknn(Income~.,data=taprendizaje,kmax=151)
+prediccion_k<-predict(modelo_k,ttesting[,-15])
+## Matriz de Confusion
+MC_k<-table(ttesting[,15],prediccion_k)
+MC_k
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_k)))/sum(MC_k)
+acierto
+error<-1-acierto
+error
+```
+###M?todo de Bayes
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_bayes <- naiveBayes(Income~.,data=taprendizaje)
+prediccion_bayes <- predict(modelo_bayes, ttesting[,-15])
+## Matriz de Confusion
+MC_bayes<-table(ttesting[,15],prediccion_bayes)
+MC_bayes
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_bayes)))/sum(MC_bayes)
+acierto
+error<-1-acierto
+error
+```
+###M?quinas de Soporte Vectorial
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_msv <- svm(Income~., data = taprendizaje, kernel = "linear")
+prediccion_msv <- predict(modelo_msv,ttesting)
+## Matriz de Confusion
+MC_msv<-table(ttesting[,15],prediccion_msv)
+MC_msv
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_msv)))/sum(MC_msv)
+acierto
+error<-1-acierto
+error
+```
+###Arboles de decision
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(rpart.plot)))
+modelo_arbol <- rpart(Income~.,data=datos)
+plot(modelo_arbol)
+text(modelo_arbol)
+prediccion_arbol<-predict(modelo_arbol,ttesting,type='class')
+## Matriz de Confusion
+MC_arbol<-table(ttesting[,15],prediccion_arbol)
+MC_arbol
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_arbol)))/sum(MC_arbol)
+acierto
+error<-1-acierto
+error
+```
+###Bosques Aleatorios
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(randomForest)))
+modelo_bosques<-randomForest(Income~.,data=taprendizaje,importance=TRUE)
+prediccion_bosques<-predict(modelo_bosques, ttesting[,-15])
+## Matriz de Confusion
+MC_rf<-table(ttesting[,15],prediccion_bosques)
+MC_rf
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_rf)))/sum(MC_rf)
+acierto
+error<-1-acierto
+error
+```
+###M?todos de Potenciaci?n - Boosting
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(ada)))
+modelo_potenciacion<-ada(Income~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+prediccion_potenciacion<-predict(modelo_potenciacion, ttesting[,-15])
+## Matriz de Confusion
+MC_boost<-table(ttesting[,15],prediccion_potenciacion)
+MC_boost
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_boost)))/sum(MC_boost)
+acierto
+error<-1-acierto
+error
+```
+###Redes Neuronales
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(nnet)))
+modelo_RN<-nnet(Income~.,data=taprendizaje,size = 4, rang = 0.1,decay = 5e-4, maxit = 200,trace=FALSE)
+modelo_RN
+prediccion_RN<-predict(modelo_RN, ttesting[,-15],type = "class")
+## Matriz de Confusion
+MC_RN<-table(ttesting[,15],prediccion_RN)
+MC_RN
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_RN)))/sum(MC_RN)
+acierto
+error<-1-acierto
+error
+```
+###Indices - Matriz de Confusion
+```{r, fig.align='center'}
+matriz_confusion <- function(X) {
+  precision <-  (X[1,1]+X[2,2])/(X[1,1]+X[1,2]+X[2,2]+X[2,1])
+  precision_positiva <-  (X[1,1]+X[2,2])/(X[1,1]+X[1,2]+X[2,2]+X[2,1])
+  precision_negativa <-  (X[2,2])/(X[2,2]+X[2,1])
+  falsos_positivos <-  (X[1,2])/(X[1,1]+X[1,2])
+  falsos_negativos <-  (X[2,1])/(X[2,2]+X[2,1])
+  resultados <-list(precision = precision, precision_positiva = precision_positiva,precision_negativa = precision_negativa, falsos_positivos = falsos_positivos,falsos_negativos = falsos_negativos) 
+  return(resultados)
+}
+
+A <- matrix(c(55,24,21,16),2,2)
+A
+matriz_confusion(A)
+
+```
+###Indices - Matriz de Confusion (Dataframe)
+```{r, fig.align='center'}
+matriz_confusion1 <- function(DF) {
+  precision <-  (DF[1,1]+DF[2,2])/(DF[1,1]+DF[1,2]+DF[2,2]+DF[2,1])
+  precision_positiva <-  (DF[2,2])/(DF[2,2]+DF[2,1])
+  precision_negativa <-  (DF[1,1])/(DF[1,2]+DF[1,1])
+  falsos_positivos <-  (DF[1,2])/(DF[1,1]+DF[1,2])
+  falsos_negativos <-  (DF[2,1])/(DF[2,2]+DF[2,1])
+  resultados <-list(precision = precision, precision_positiva = precision_positiva,precision_negativa = precision_negativa, falsos_positivos = falsos_positivos,falsos_negativos = falsos_negativos) 
+  return(resultados)
+}
+# Arbol
+matriz_confusion1(MC_arbol)
+# Bayes
+matriz_confusion1(MC_bayes)
+# Boosting
+matriz_confusion1(MC_boost)
+# K
+matriz_confusion1(MC_k)
+# Maquinas de Soporte Vectorial
+matriz_confusion1(MC_msv)
+# Random Forest
+matriz_confusion1(MC_rf)
+```
+Los metodos de k vecinos mas cercanos y arboles de decision muestran los niveles de prediccion mas elevados.
+
+## Pregunta 3
+
+###Data: Ingresos
+```{r, fig.align='center'}
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 2/Tarea2")
+datos <- read.table('ZipDataTrainCod.csv', header=TRUE, sep=';',dec='.') 
+taprendizaje <- read.table('ZipDataTrainCod.csv', header=TRUE, sep=';',dec='.') 
+
+```
+### Tabla de aprendizaje y testing
+```{r, fig.align='center'}
+#Tabla de testing y aprendizaje
+ttesting <- read.table('ZipDataTestCod.csv', header=TRUE, sep=';',dec='.')
+```
+###M?todo de los K vecinos m?s cercanos
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+modelo_k<-train.kknn(as.factor(Numero)~.,data=taprendizaje,kmax=85)
+prediccion_k<-predict(modelo_k,ttesting[,-1])
+## Matriz de Confusion
+MC_k<-table(ttesting[,1],prediccion_k)
+MC_k
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_k)))/sum(MC_k)
+acierto
+error<-1-acierto
+error
+```
+###M?todo de Bayes
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_bayes <- naiveBayes(Numero~.,data=taprendizaje)
+prediccion_bayes <- predict(modelo_bayes, ttesting[,-1])
+## Matriz de Confusion
+MC_bayes<-table(ttesting[,1],prediccion_bayes)
+MC_bayes
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_bayes)))/sum(MC_bayes)
+acierto
+error<-1-acierto
+error
+```
+###M?quinas de Soporte Vectorial
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_msv <- svm(as.factor(Numero)~., data = taprendizaje, kernel = "linear")
+prediccion_msv <- predict(modelo_msv,ttesting)
+## Matriz de Confusion
+MC_msv<-table(ttesting[,1],prediccion_msv)
+MC_msv
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_msv)))/sum(MC_msv)
+acierto
+error<-1-acierto
+error
+```
+###Arboles de decision
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(rpart.plot)))
+modelo_arbol <- rpart(Numero~.,data=datos)
+plot(modelo_arbol)
+text(modelo_arbol)
+prediccion_arbol<-predict(modelo_arbol,ttesting,type='class')
+## Matriz de Confusion
+MC_arbol<-table(ttesting[,1],prediccion_arbol)
+MC_arbol
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_arbol)))/sum(MC_arbol)
+acierto
+error<-1-acierto
+error
+```
+###Bosques Aleatorios
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(randomForest)))
+modelo_bosques<-randomForest(as.factor(Numero)~.,data=taprendizaje,importance=TRUE)
+prediccion_bosques<-predict(modelo_bosques, ttesting[,-1])
+## Matriz de Confusion
+MC_rf<-table(ttesting[,1],prediccion_bosques)
+MC_rf
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_rf)))/sum(MC_rf)
+acierto
+error<-1-acierto
+error
+```
+###Redes Neuronales
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(nnet)))
+modelo_RN<-nnet(as.factor(Numero)~.,data=taprendizaje,size = 4, rang = 0.1,decay = 5e-4, maxit = 200,MaxNWts = 10000,trace=FALSE)
+modelo_RN
+prediccion_RN<-predict(modelo_RN, ttesting[,-1],type = "class")
+## Matriz de Confusion
+MC_RN<-table(ttesting[,1],prediccion_RN)
+MC_RN
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_RN)))/sum(MC_RN)
+acierto
+error<-1-acierto
+error
+```
+
+###Indices - Matriz de Confusion (Dataframe)
+```{r, fig.align='center', error=TRUE}
+matriz_confusion1 <- function(DF) {
+  precision_cero <-  DF[1,1]/(DF[1,1]+DF[1,2]+DF[1,3]+DF[1,4]+DF[1,5]+DF[1,6]+DF[1,7]+DF[1,8]+DF[1,9]+DF[1,10])
+  precision_cinco <-  DF[2,2]/(DF[2,1]+DF[2,2]+DF[2,3]+DF[2,4]+DF[2,5]+DF[2,6]+DF[2,7]+DF[2,8]+DF[2,9]+DF[2,10])
+  precision_cuatro <-  (DF[3,3])/(DF[3,1]+DF[3,2]+DF[3,3]+DF[3,4]+DF[3,5]+DF[3,6]+DF[3,7]+DF[3,8]+DF[3,9]+DF[3,10])
+  precision_dos <-  (DF[4,4])/(DF[4,1]+DF[4,2]+DF[4,3]+DF[4,4]+DF[4,5]+DF[4,6]+DF[4,7]+DF[4,8]+DF[4,9]+DF[4,10])
+  precision_nueve <-  (DF[5,5])/(DF[5,1]+DF[5,2]+DF[5,3]+DF[5,4]+DF[5,5]+DF[5,6]+DF[5,7]+DF[5,8]+DF[5,9]+DF[5,10])
+  precision_ocho <-  (DF[6,6])/(DF[6,1]+DF[6,2]+DF[6,3]+DF[6,4]+DF[6,5]+DF[6,6]+DF[6,7]+DF[6,8]+DF[6,9]+DF[6,10])
+  precision_seis <-  (DF[7,7])/(DF[7,1]+DF[7,2]+DF[7,3]+DF[7,4]+DF[7,5]+DF[7,6]+DF[7,7]+DF[7,8]+DF[7,9]+DF[7,10])
+  precision_siete <-  (DF[8,8])/(DF[8,1]+DF[8,2]+DF[8,3]+DF[8,4]+DF[8,5]+DF[8,6]+DF[8,7]+DF[8,8]+DF[8,9]+DF[8,10])
+  precision_tres <-  (DF[9,9])/(DF[9,1]+DF[9,2]+DF[9,3]+DF[9,4]+DF[9,5]+DF[9,6]+DF[9,7]+DF[9,8]+DF[9,9]+DF[9,10])
+  precision_uno <-  (DF[10,10])/(DF[10,1]+DF[10,2]+DF[10,3]+DF[10,4]+DF[10,5]+DF[10,6]+DF[10,7]+DF[10,8]+DF[10,9]+DF[10,10])
+  
+  resultados <-list(precision_cero = precision_cero, precision_cinco=precision_cinco, precision_cuatro=precision_cuatro, precision_dos=precision_dos, precision_nueve=precision_nueve, precision_ocho=precision_ocho, precision_seis=precision_seis, precision_siete=precision_siete, precision_tres=precision_tres,  precision_uno=precision_uno ) 
+  return(resultados)
+}
+matriz_confusion1(MC_arbol)
+matriz_confusion1(MC_bayes)
+matriz_confusion1(MC_k)
+matriz_confusion1(MC_msv)
+matriz_confusion1(MC_rf)
+matriz_confusion1(MC_RN)
+```
+
+| Modelo              | Precision Global | Error Global | 
+|---------------------|------------------|--------------|
+| Arboles de Decision | 0.7249626        | 0.2750374    | 
+| Bayes               | 0.7384155        | 0.2615845    | 
+| K vecinos           | 0.9282511        | 0.07174888   | 
+| Maquinas de Soporte | 0.9297459        | 0.07025411   |     
+| Random Forest       | 0.941704         | 0.05829596   |   
+| Redes Neuronales    | 0.712008         | 0.287992     | 
+
+La calidad de la predicci?n global a trav?s de Bosques Aleatorios fue buena dado que la precisi?n fue de 94%, por lo que eligiria ese modelo.
+
+## Pregunta 4
+
+###Data: Data TC
+```{r, fig.align='center'}
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 2/Tarea2")
+datos <- read.table('DataTC.csv', header=TRUE, sep=';',dec='.') 
+datos$incumplio <- as.factor(datos$incumplio)
+datos$sexo <- as.factor(datos$sexo)
+
+```
+La variable a predecir no puede ser una variable cuantitiva porque en los modelos predictivos la variable dependiente es categorica, si la variable predictiva fuera cuantitativa estariamos deberiamos usar un modelo de regresion.
+
+###Diccionario de Datos
+
+Con el objetivo de predecir si el deudor registrar? alg?n incumplimiento mayor o igual a los 30 d?as de atraso se utilizar?  una base de datos que consta de siete variables medidas para 21 304 deudores. Las definiciones de las variables se presentan a continuaci?n.
+
+Variable   | Tipo       | Definicion
+---------- | -----------|----------------------------------------------------------
+Incumplio  |Cualitativa | Adopta el valor de 1 si el deudor tiene un incumplimiento .
+Ingreso    |Cuantitiva  | Ingreso de los deudores.
+Edad       |Cuantitiva  | Diferencia entre la fecha de nacimiento y la fecha actual.
+Sexo       |Cualitativa | Sexo del deudor. Adopta el valor de 1 si es hombre y 0 si es mujer.
+TEA        |Cuantitiva  | Tasa de inter?s efectiva de la tarjeta de cr?dito.
+Linea      |Cuantitiva  | Valor del cr?dito permanente que puede ser usado en cualquier momento.
+Saldo prom |Cuantitiva  | Saldo promedio de cr?ditos de consumo en otras entidades del SF.
+N TC       |Cuantitiva  | N?mero de Tarjetas de Cr?dito que posee el deudor.
+
+
+
+### Tabla de aprendizaje y testing
+```{r, fig.align='center'}
+#Tabla de testing y aprendizaje
+N<-dim(datos)[1]
+N
+muestra <- sample(1:N,N*0.7)
+taprendizaje <- datos[muestra,]
+ttesting <- datos[-muestra,]
+```
+###M?todo de los K vecinos m?s cercanos
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+modelo_k<-train.kknn(incumplio~.,data=taprendizaje,kmax=123)
+prediccion_k<-predict(modelo_k,ttesting[,-8])
+## Matriz de Confusion
+MC_k<-table(ttesting[,8],prediccion_k)
+MC_k
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_k)))/sum(MC_k)
+acierto
+error<-1-acierto
+error
+```
+###M?todo de Bayes
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_bayes <- naiveBayes(incumplio~.,data=taprendizaje)
+prediccion_bayes <- predict(modelo_bayes, ttesting[,-8])
+## Matriz de Confusion
+MC_bayes<-table(ttesting[,8],prediccion_bayes)
+MC_bayes
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_bayes)))/sum(MC_bayes)
+acierto
+error<-1-acierto
+error
+```
+###M?quinas de Soporte Vectorial
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_msv <- svm(incumplio~., data = taprendizaje, kernel = "linear")
+prediccion_msv <- predict(modelo_msv,ttesting)
+## Matriz de Confusion
+MC_msv<-table(ttesting[,8],prediccion_msv)
+MC_msv
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_msv)))/sum(MC_msv)
+acierto
+error<-1-acierto
+error
+```
+###Arboles de decision
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(rpart.plot)))
+modelo_arbol <- rpart(incumplio~.,data=datos)
+plot(modelo_arbol)
+text(modelo_arbol)
+prediccion_arbol<-predict(modelo_arbol,ttesting,type='class')
+## Matriz de Confusion
+MC_arbol<-table(ttesting[,8],prediccion_arbol)
+MC_arbol
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_arbol)))/sum(MC_arbol)
+acierto
+error<-1-acierto
+error
+```
+###Bosques Aleatorios
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(randomForest)))
+modelo_bosques<-randomForest(incumplio~.,data=taprendizaje,importance=TRUE)
+prediccion_bosques<-predict(modelo_bosques, ttesting[,-8])
+## Matriz de Confusion
+MC_rf<-table(ttesting[,8],prediccion_bosques)
+MC_rf
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_rf)))/sum(MC_rf)
+acierto
+error<-1-acierto
+error
+```
+###M?todos de Potenciaci?n - Boosting
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(ada)))
+modelo_potenciacion<-ada(incumplio~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+prediccion_potenciacion<-predict(modelo_potenciacion, ttesting[,-8])
+## Matriz de Confusion
+MC_boost<-table(ttesting[,8],prediccion_potenciacion)
+MC_boost
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_boost)))/sum(MC_boost)
+acierto
+error<-1-acierto
+error
+```
+###Redes Neuronales
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(nnet)))
+modelo_RN<-nnet(incumplio~.,data=taprendizaje,size = 4, rang = 0.1,decay = 5e-4, maxit = 200,trace=FALSE)
+modelo_RN
+prediccion_RN<-predict(modelo_RN, ttesting[,-8],type = "class")
+## Matriz de Confusion
+MC_RN<-table(ttesting[,8],prediccion_RN)
+MC_RN
+# Porcentaje de buena clasificaci?n
+acierto<-(sum(diag(MC_RN)))/sum(MC_RN)
+acierto
+error<-1-acierto
+error
+```
+###Indices - Matriz de Confusion (Dataframe)
+```{r, fig.align='center'}
+matriz_confusion1 <- function(DF) {
+  precision <-  (DF[1,1]+DF[2,2])/(DF[1,1]+DF[1,2]+DF[2,2]+DF[2,1])
+  precision_positiva <-  (DF[2,2])/(DF[2,2]+DF[2,1])
+  precision_negativa <-  (DF[1,1])/(DF[1,2]+DF[1,1])
+  falsos_positivos <-  (DF[1,2])/(DF[1,1]+DF[1,2])
+  falsos_negativos <-  (DF[2,1])/(DF[2,2]+DF[2,1])
+  resultados <-list(precision = precision, precision_positiva = precision_positiva,precision_negativa = precision_negativa, falsos_positivos = falsos_positivos,falsos_negativos = falsos_negativos) 
+  return(resultados)
+}
+matriz_confusion1(MC_arbol)
+matriz_confusion1(MC_bayes)
+matriz_confusion1(MC_boost)
+matriz_confusion1(MC_k)
+matriz_confusion1(MC_msv)
+matriz_confusion1(MC_rf)
+matriz_confusion1(MC_RN)
+```
+
+| Modelo              | Precision Global | Error Global | Precision Negativa | Precision Positiva |
+|---------------------|------------------|--------------|--------------------|--------------------|
+| Arboles de Decision |     0.7797247    |   0.2202     |      0.494012      |      0.9102097     |
+| Bayes               |     0.5907384    |   0.4093     |      0.4872379     |      0.8173653     |
+| Boosting            |     0.7861389    |   0.2139     |      0.8974476     |      0.5424152     |
+| K                   |     0.767209     |   0.2327     |      0.8881039     |      0.502495      |
+| Maquinas de Soporte |     0.7077597    |   0.2923     |      0.98268       |      0.1057884     |
+| Random Forest       |     0.7991239    |   0.2009     |      0.9154512     |      0.5444112     |
+| Redes Neuronales    |     0.7510951    |   0.2490     |      0.819052      |      0.6022954     |
+
+La calidad de la predicci?n global a trav?s de ?rboles Aleatorios fue buena dado que el precisi?n es cercana al 80%, no obstante en el an?lisis de riesgo de cr?dito importa la precisi?n positiva en la medida que resulta relevante predecir que deudores incumplir?n con el pago del cr?dito. El modelo de ?rboles de Decisi?n arroja una precisi?n positiva de solo 91%, por lo que eligiria ese modelo.

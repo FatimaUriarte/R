@@ -1,0 +1,659 @@
+---
+title: "Tarea_4 Metodos Avanzados en Mineria de Datos"
+author: "Fatima Uriarte"
+date: "June 19, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+
+
+```
+###Data: Ejemplo Algoritmo de Recomendacion
+```{r, fig.align='center', warning=FALSE}
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 4/Tarea4")
+datos <- read.table('EjemploAlgoritmosRecomendacion.csv', header=TRUE, sep=';',dec=',',row.names=1) 
+
+```
+## Pregunta 1
+
+### Codo de Jambu
+```{r, fig.align='center'}
+InerciaIC.Hartigan<-rep(0,30)
+InerciaIC.Lloyd<-rep(0,30)
+InerciaIC.Forgy<-rep(0,30)
+InerciaIC.MacQueen<-rep(0,30)
+for(k in 1:40) {
+   grupos<-kmeans(datos,k,iter.max=200,algorithm = "Hartigan-Wong")
+   InerciaIC.Hartigan[k]<-grupos$tot.withinss
+   grupos<-kmeans(datos,k,iter.max=200,algorithm = "Lloyd")
+   InerciaIC.Lloyd[k]<-grupos$tot.withinss
+   grupos<-kmeans(datos,k,iter.max=200,algorithm = "Forgy")
+   InerciaIC.Forgy[k]<-grupos$tot.withinss
+   grupos<-kmeans(datos,k,iter.max=200,algorithm = "MacQueen")
+   InerciaIC.MacQueen[k]<-grupos$tot.withinss
+}
+plot(InerciaIC.Hartigan,col="blue",type="b")
+points(InerciaIC.Lloyd,col="red",type="b")
+points(InerciaIC.Forgy,col="green",type="b")
+points(InerciaIC.MacQueen,col="magenta",type="b")
+legend("topright",legend = c("Hartigan","Lloyd","Forgy","MacQueen"), col = c("blue", 
+    "red","green","magenta"), lty = 1, lwd = 1)
+```
+
+#### Como se puede ver en el gr?fico de arriba los 4 algoritmos se estabilizan en k=4 o por lo menos a partir de ese valor de k la inercia intra-clases no var?a tanto de un k al siguiente.
+
+### Mejor algoritmo: Hartigan-Wong, Lloyd, Forgy y MacQueen
+```{r, fig.align='center',  warning=FALSE}
+Hartigan<-0
+Lloyd<-0
+Forgy<-0
+MacQueen<-0
+for(i in 1:40) {
+  grupos<-kmeans(datos,4,iter.max=100,algorithm = "Hartigan-Wong")
+  Hartigan<-Hartigan+grupos$betweenss
+  grupos<-kmeans(datos,4,iter.max=100,algorithm = "Lloyd")
+  Lloyd<-Lloyd+grupos$betweenss
+  grupos<-kmeans(datos,4,iter.max=100,algorithm = "Forgy")
+  Forgy<-Forgy+grupos$betweenss
+  grupos<-kmeans(datos,4,iter.max=100,algorithm = "MacQueen")
+  MacQueen<-MacQueen+grupos$betweenss
+} 
+Hartigan/40
+Lloyd/40
+Forgy/40
+MacQueen/40
+
+```
+#### Dado que este es un modelo descriptivo, lo mejor es que se maximice la Inercia Inter-Clases, de este modo se deduce que el mejor algoritmo para estos datos es el de "Hartigan-Wong".
+
+### Repetimos el ejercicio con un parametro nstart = 100
+```{r, fig.align='center', warning=FALSE}
+InerciaIC.Hartigan<-rep(0,30)
+InerciaIC.Lloyd<-rep(0,30)
+InerciaIC.Forgy<-rep(0,30)
+InerciaIC.MacQueen<-rep(0,30)
+for(k in 1:40) {
+   grupos<-kmeans(datos,k,iter.max=200,nstart = 100, algorithm = "Hartigan-Wong")
+   InerciaIC.Hartigan[k]<-grupos$tot.withinss
+   grupos<-kmeans(datos,k,iter.max=200,nstart = 100,algorithm = "Lloyd")
+   InerciaIC.Lloyd[k]<-grupos$tot.withinss
+   grupos<-kmeans(datos,k,iter.max=200,nstart = 100,algorithm = "Forgy")
+   InerciaIC.Forgy[k]<-grupos$tot.withinss
+   grupos<-kmeans(datos,k,iter.max=200,nstart = 100,algorithm = "MacQueen")
+   InerciaIC.MacQueen[k]<-grupos$tot.withinss
+}
+plot(InerciaIC.Hartigan,col="blue",type="b")
+points(InerciaIC.Lloyd,col="red",type="b")
+points(InerciaIC.Forgy,col="green",type="b")
+points(InerciaIC.MacQueen,col="magenta",type="b")
+legend("topright",legend = c("Hartigan","Lloyd","Forgy","MacQueen"), col = c("blue", 
+    "red","green","magenta"), lty = 1, lwd = 1)
+Hartigan<-0
+Lloyd<-0
+Forgy<-0
+MacQueen<-0
+for(i in 1:40) {
+  grupos<-kmeans(datos,4,iter.max=100,nstart = 100,algorithm = "Hartigan-Wong")
+  Hartigan<-Hartigan+grupos$betweenss
+  grupos<-kmeans(datos,4,iter.max=100,nstart = 100,algorithm = "Lloyd")
+  Lloyd<-Lloyd+grupos$betweenss
+  grupos<-kmeans(datos,4,iter.max=100,nstart = 100,algorithm = "Forgy")
+  Forgy<-Forgy+grupos$betweenss
+  grupos<-kmeans(datos,4,iter.max=100,nstart = 100,algorithm = "MacQueen")
+  MacQueen<-MacQueen+grupos$betweenss
+} 
+Hartigan/40
+Lloyd/40
+Forgy/40
+MacQueen/40
+
+```
+
+####  El comando nstart permite configurar multiples condiciones iniciales y reporta la mejor. Es mejor utilizar nstart igual a 100 que el default igual a 1 porque permite obtener un mejor resultado. De este modo, se observa que cuando seleccionamos nstart igual a 100, los resultados del codo de jambu son mas estables, asimismo, la inercia interclases da un mejor resultado en esta configuracion.
+
+###Data: Ingresos
+```{r, fig.align='center', warning=FALSE}
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 4/Tarea4")
+datos <- read.table('DatosIngresos.csv', header=TRUE, sep=';',dec='.') 
+# Recodifica las variables como cualitativas
+datos$workclass <- as.factor(datos$workclass)
+datos$education <- as.factor(datos$education)
+datos$marital.status <- as.factor(datos$marital.status)
+datos$occupation <- as.factor(datos$occupation)
+datos$relationship <- as.factor(datos$relationship)
+datos$race <- as.factor(datos$race)
+datos$sex <- as.factor(datos$sex)
+datos$native.country <- as.factor(datos$native.country)
+datos$Income <- as.factor(datos$Income)
+suppressWarnings(suppressMessages(library(ada)))
+suppressMessages(library(caret))
+
+
+```
+## Pregunta 2
+### Calibracion modelo ADA: Suma de los 50K detectados
+```{r, fig.align='center', warning=FALSE}
+#Tabla de testing y aprendizaje
+N<-dim(datos)[1]
+tmuestra <- sample(1:N,2000)
+tmuestra <- datos[tmuestra,]
+summary(tmuestra[,15]) #Se verifica una proporcion similar
+n<-dim(tmuestra)
+
+deteccion.discrete<-rep(0,6)
+deteccion.real<-rep(0,6)
+deteccion.gentle<-rep(0,6)
+
+
+
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  no.discrete<-0
+  no.real<-0
+  no.gentle<-0
+  
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- tmuestra[muestra,]
+      taprendizaje <- tmuestra[-muestra,]
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])    
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n de los que tienen ingresos superiores a 50K
+      no.discrete<-no.discrete+MC[2,2]
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="real")
+      prediccion<-predict(modelo, ttesting[,-15])   
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n de los que tienen ingresos superiores a 50K
+      no.real<-no.real+MC[2,2]
+
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="gentle")
+      prediccion<-predict(modelo, ttesting[,-15])  
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n de los que tienen ingresos superiores a 50K
+      no.gentle<-no.gentle+MC[2,2]
+
+   }
+   deteccion.discrete[i]<-no.discrete
+   deteccion.real[i]<-no.real
+   deteccion.gentle[i]<-no.gentle
+}
+
+```
+
+```{r, fig.align='center', warning=FALSE}
+plot(deteccion.discrete, col = "magenta", type = "b",  ylim = c(min(deteccion.discrete,deteccion.real,deteccion.gentle), max(deteccion.discrete,deteccion.real,deteccion.gentle)+20), main = "Detecci?n de ingresos superiores a 50K en ADA", xlab = "N?mero de iteraci?n", ylab = "Cantidad de detectados")
+points(deteccion.discrete, col = "blue", type = "b")
+points(deteccion.real, col = "red", type = "b")
+points(deteccion.gentle, col = "green", type = "b")
+legend("topright", legend = c("Discrete","Real","Gentle"), col = c("magenta", "blue","red"), lty = 1, lwd = 1)
+```
+
+####  No es facil detectar con claridad cual algoritmo es mejor.
+
+### Calibracion modelo ADA: Promedio de los seis errores globales
+
+```{r, fig.align='center', warning=FALSE}
+#Tabla de testing y aprendizaje
+deteccion.error.discrete<-rep(0,6)
+deteccion.error.real<-rep(0,6)
+deteccion.error.gentle<-rep(0,6)
+
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  error.discrete<-0
+  error.real<-0
+  error.gentle<-0
+
+# Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- tmuestra[muestra,]
+      taprendizaje <- tmuestra[-muestra,]
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])    
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n del error
+      error.discrete<-error.discrete+(1-(sum(diag(MC)))/sum(MC))*100
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="real")
+      prediccion<-predict(modelo, ttesting[,-15])   
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n del error
+      error.real<-error.real+(1-(sum(diag(MC)))/sum(MC))*100
+
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="gentle")
+      prediccion<-predict(modelo, ttesting[,-15])  
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n del error
+      error.gentle<-error.gentle+(1-(sum(diag(MC)))/sum(MC))*100
+
+   }
+   deteccion.error.discrete[i]<-error.discrete/5
+   deteccion.error.real[i]<-error.real/5
+   deteccion.error.gentle[i]<-error.gentle/5
+}
+
+```
+
+```{r, fig.align='center', warning=FALSE}
+plot(deteccion.error.discrete, col = "magenta", type = "b",  ylim = c(min(deteccion.error.discrete,deteccion.error.real,deteccion.error.gentle), max(deteccion.error.discrete,deteccion.error.real,deteccion.error.gentle)+2), main = "Detecci?n del error en ADA", xlab = "N?mero de iteraci?n", ylab = "Error cometido")
+points(deteccion.error.discrete, col = "blue", type = "b")
+points(deteccion.error.real, col = "red", type = "b")
+points(deteccion.error.gentle, col = "green", type = "b")
+legend("topright", legend = c("Discrete","Real","Gentle"), col = c("magenta", "blue","red"), lty = 1, lwd = 1)
+```
+####  No es facil detectar con claridad cual algoritmo es mejor.
+
+####  En base a los resultados anteriores, no es facil detectar con claridad cual algoritmo es mejor, aunque si se tuviera que escoger algun metodo, escogeria el metodo Gentle.
+
+### Ejercicio Optativo: Calibracion modelo ADA con toda la tabla de datos
+```{r, fig.align='center', warning=FALSE}
+deteccion.discrete<-rep(0,6)
+deteccion.real<-rep(0,6)
+deteccion.gentle<-rep(0,6)
+
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:N,5) # Crea los 5 grupos
+  no.discrete<-0
+  no.real<-0
+  no.gentle<-0
+  
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- datos[muestra,]
+      taprendizaje <- datos[-muestra,]
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])    
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n de los que tienen ingresos superiores a 50K
+      no.discrete<-no.discrete+MC[2,2]
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="real")
+      prediccion<-predict(modelo, ttesting[,-15])   
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n de los que tienen ingresos superiores a 50K
+      no.real<-no.real+MC[2,2]
+
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="gentle")
+      prediccion<-predict(modelo, ttesting[,-15])  
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n de los que tienen ingresos superiores a 50K
+      no.gentle<-no.gentle+MC[2,2]
+
+   }
+   deteccion.discrete[i]<-no.discrete
+   deteccion.real[i]<-no.real
+   deteccion.gentle[i]<-no.gentle
+}
+
+#Tabla de testing y aprendizaje
+deteccion.error.discrete<-rep(0,6)
+deteccion.error.real<-rep(0,6)
+deteccion.error.gentle<-rep(0,6)
+
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  error.discrete<-0
+  error.real<-0
+  error.gentle<-0
+
+# Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- datos[muestra,]
+      taprendizaje <- datos[-muestra,]
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])    
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n del error
+      error.discrete<-error.discrete+(1-(sum(diag(MC)))/sum(MC))*100
+      
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="real")
+      prediccion<-predict(modelo, ttesting[,-15])   
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n del error
+      error.real<-error.real+(1-(sum(diag(MC)))/sum(MC))*100
+
+      modelo<-ada(Income~.,data=taprendizaje,iter=60,nu=1,type="gentle")
+      prediccion<-predict(modelo, ttesting[,-15])  
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      # Detecci?n del error
+      error.gentle<-error.gentle+(1-(sum(diag(MC)))/sum(MC))*100
+
+   }
+   deteccion.error.discrete[i]<-error.discrete/5
+   deteccion.error.real[i]<-error.real/5
+   deteccion.error.gentle[i]<-error.gentle/5
+}
+
+```
+
+```{r, fig.align='center', warning=FALSE}
+plot(deteccion.discrete, col = "magenta", type = "b",  ylim = c(min(deteccion.discrete,deteccion.real,deteccion.gentle), max(deteccion.discrete,deteccion.real,deteccion.gentle)+20), main = "Detecci?n de ingresos superiores a 50K en ADA", xlab = "N?mero de iteraci?n", ylab = "Cantidad de detectados")
+points(deteccion.discrete, col = "blue", type = "b")
+points(deteccion.real, col = "red", type = "b")
+points(deteccion.gentle, col = "green", type = "b")
+legend("topright", legend = c("Discrete","Real","Gentle"), col = c("magenta", "blue","red"), lty = 1, lwd = 1)
+
+plot(deteccion.error.discrete, col = "magenta", type = "b",  ylim = c(min(deteccion.error.discrete,deteccion.error.real,deteccion.error.gentle), max(deteccion.error.discrete,deteccion.error.real,deteccion.error.gentle)+2), main = "Detecci?n del error en ADA", xlab = "N?mero de iteraci?n", ylab = "Error cometido")
+points(deteccion.error.discrete, col = "blue", type = "b")
+points(deteccion.error.real, col = "red", type = "b")
+points(deteccion.error.gentle, col = "green", type = "b")
+legend("topright", legend = c("Discrete","Real","Gentle"), col = c("magenta", "blue","red"), lty = 1, lwd = 1)
+```
+
+## Pregunta 3
+### Comparacion metodos predictivos
+### Predicicon variable 50K
+```{r, fig.align='center', warning=FALSE}
+suppressWarnings(suppressMessages(library(e1071)))
+suppressWarnings(suppressMessages(library(kknn)))
+suppressWarnings(suppressMessages(library(MASS)))
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(randomForest)))
+suppressWarnings(suppressMessages(library(ada)))
+suppressWarnings(suppressMessages(library(nnet)))
+
+deteccion.no.svm<-rep(0,6)
+deteccion.no.knn<-rep(0,6)
+deteccion.no.arbol<-rep(0,6)
+deteccion.no.bosque<-rep(0,6)
+deteccion.no.potenciacion<-rep(0,6)
+deteccion.no.red<-rep(0,6)
+deteccion.no.Bayes<-rep(0,6)
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  no.svm<-0
+  no.knn<-0
+  no.arbol<-0
+  no.bosque<-0
+  no.potenciacion<-0
+  no.red<-0
+  no.Bayes<-0
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- tmuestra[muestra,]
+      taprendizaje <- tmuestra[-muestra,]
+      # SVM
+      modelo <- svm(Income~., data=taprendizaje,kernel ="radial")
+      prediccion <- predict(modelo,ttesting)
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.svm<-no.svm+MC[2,2]
+      # KKNN
+      modelo <- train.kknn(Income~.,data=taprendizaje,kmax=7)
+      prediccion<-predict(modelo,ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.knn<-no.knn+MC[2,2]
+      # Arbol
+      modelo = rpart(Income~.,data=taprendizaje)
+      prediccion <- predict(modelo, ttesting, type='class')
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.arbol<-no.arbol+MC[2,2]    
+      # Bosques
+      modelo<-randomForest(Income~.,data=taprendizaje,importance=TRUE)
+      prediccion<-predict(modelo, ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.bosque<-no.bosque+MC[2,2]    
+      # ADA
+      modelo<-ada(Income~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.potenciacion<-no.potenciacion+MC[2,2]          
+      # Redes Neuronales
+       modelo<-nnet(Income~.,data=taprendizaje,size=5,rang=0.1,decay=5e-4,maxit=100,trace=FALSE)
+       prediccion<-predict(modelo, ttesting[,-15],type = "class")
+       Actual<-ttesting[,15]
+       MC<-table(Actual,prediccion)
+       if (dim(MC)[2]==1){
+          MC<-cbind(MC,c(0,0))
+          }
+       no.red<-no.red+MC[2,2]    
+      # Bayes
+      modelo<-naiveBayes(Income~.,data=taprendizaje)      
+      prediccion<-predict(modelo, ttesting[,1:14])
+      MC<-table(ttesting[,15],prediccion)
+      no.Bayes<-no.Bayes+MC[2,2]
+   }
+   deteccion.no.svm[i]<-no.svm
+   deteccion.no.knn[i]<-no.knn
+   deteccion.no.arbol[i]<-no.arbol
+   deteccion.no.bosque[i]<-no.bosque
+   deteccion.no.potenciacion[i]<-no.potenciacion
+   deteccion.no.red[i]<-no.red
+   deteccion.no.Bayes[i]<-no.Bayes
+}
+plot(deteccion.no.svm, col = "magenta", type = "b",  ylim = c(min(deteccion.no.svm,deteccion.no.knn,deteccion.no.arbol,deteccion.no.bosque,deteccion.no.potenciacion,deteccion.no.red,deteccion.no.Bayes), max(deteccion.no.svm,deteccion.no.knn,deteccion.no.arbol,deteccion.no.bosque,deteccion.no.potenciacion,deteccion.no.red,deteccion.no.Bayes)+100), main = "Detecci?n de ingresos 50K", xlab = "N?mero de iteraci?n", ylab = "Cantidad de Ingresos 50K detectados")
+points(deteccion.no.knn, col = "blue", type = "b")
+points(deteccion.no.arbol, col = "red", type = "b")
+points(deteccion.no.bosque, col = "green", type = "b")
+points(deteccion.no.potenciacion, col = "orange3", type = "b")
+points(deteccion.no.red, col = "rosybrown4", type = "b")
+points(deteccion.no.Bayes, col = "lightpink2", type = "b")
+legend("topright", legend = c("SVM","KNN","?rbol","Bosque","Potenciaci?n","Red Neuronal","Bayes"), col = c("magenta", "blue","red","green","orange3","rosybrown4","lightpink2"), lty = 1, lwd = 2)
+```
+####  En base a los resultados anteriores, se podria senalar que los mejores metodos son Arboles Aleatorios y Potenciacion.
+
+### Prediccion Error
+```{r, fig.align='center', warning=FALSE}
+deteccion.error.svm<-rep(0,6)
+deteccion.error.knn<-rep(0,6)
+deteccion.error.arbol<-rep(0,6)
+deteccion.error.bosque<-rep(0,6)
+deteccion.error.potenciacion<-rep(0,6)
+deteccion.error.red<-rep(0,6)
+deteccion.error.bayes<-rep(0,6)
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  error.svm<-0
+  error.knn<-0
+  error.arbol<-0
+  error.bosque<-0
+  error.potenciacion<-0
+  error.red<-0
+  error.bayes<-0
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 10 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- tmuestra[muestra,]
+      taprendizaje <- tmuestra[-muestra,]
+      # SVM
+      modelo <- svm(Income~., data=taprendizaje,kernel ="radial")
+      prediccion <- predict(modelo,ttesting)
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.svm<-error.svm+(1-(sum(diag(MC)))/sum(MC))*100
+      # KKNN
+      modelo <- train.kknn(Income~.,data=taprendizaje,kmax=7)
+      prediccion<-predict(modelo,ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.knn<-error.knn+(1-(sum(diag(MC)))/sum(MC))*100
+      # Arbol
+      modelo = rpart(Income~.,data=taprendizaje)
+      prediccion <- predict(modelo, ttesting, type='class')
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.arbol<-error.arbol+(1-(sum(diag(MC)))/sum(MC))*100    
+      # Bosques
+      modelo<-randomForest(Income~.,data=taprendizaje,importance=TRUE)
+      prediccion<-predict(modelo, ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.bosque<-error.bosque+(1-(sum(diag(MC)))/sum(MC))*100    
+      # Boosting
+      modelo<-ada(Income~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.potenciacion<-error.potenciacion+(1-(sum(diag(MC)))/sum(MC))*100       # Redes Neuronales   
+      modelo<-nnet(Income~.,data=taprendizaje,size=5,rang=0.1,decay=5e-4,maxit=100,trace=FALSE)
+      prediccion<-predict(modelo, ttesting[,-15],type = "class")
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+       if (dim(MC)[2]==1){
+          MC<-cbind(MC,c(0,0))
+          }
+      error.red<-error.red+(1-(sum(diag(MC)))/sum(MC))*100 
+      # Bayes
+      modelo<-naiveBayes(Income~.,data=taprendizaje)
+      prediccion<-predict(modelo, ttesting[,1:14])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.bayes<-error.bayes+(1-(sum(diag(MC)))/sum(MC))*100     
+      
+   }
+   deteccion.error.svm[i]<-error.svm/6
+   deteccion.error.knn[i]<-error.knn/6
+   deteccion.error.arbol[i]<-error.arbol/6
+   deteccion.error.bosque[i]<-error.bosque/6
+   deteccion.error.potenciacion[i]<-error.potenciacion/6
+   deteccion.error.red[i]<-error.red/6
+   deteccion.error.bayes[i]<-error.bayes/6
+}
+plot(deteccion.error.svm, col = "magenta", type = "b",  ylim = c(min(deteccion.error.svm,deteccion.error.knn,deteccion.error.arbol,deteccion.error.bosque,deteccion.error.potenciacion,deteccion.error.red,deteccion.error.bayes), max(deteccion.error.svm,deteccion.error.knn,deteccion.error.arbol,deteccion.error.bosque,deteccion.error.potenciacion,deteccion.error.red,deteccion.error.bayes)+3), main = "Detecci?n del ERROR", xlab = "N?mero de iteraci?n", ylab = "ERROR Cometido")
+points(deteccion.error.knn, col = "blue", type = "b")
+points(deteccion.error.arbol, col = "red", type = "b")
+points(deteccion.error.bosque, col = "green", type = "b")
+points(deteccion.error.potenciacion, col = "orange3", type = "b")
+points(deteccion.error.red, col = "rosybrown4", type = "b")
+points(deteccion.error.bayes, col = "lightpink2", type = "b")
+legend("topright", legend = c("SVM","KNN","?rbol","Bosque","Potenciaci?n","Red Neuronal","LDA","QDA","Bayes"), col = c("magenta", 
+    "blue","red","green","orange3","rosybrown4","lightpink2"), lty = 1, lwd = 2)
+```
+####  De la misma manera, se podria senalar que los mejores metodos son Arboles Aleatorios y Potenciacion.
+
+#### Ejercicio Optativo: Seleccion del mejor metodo con toda la tabla de datos
+```{r, fig.align='center', warning=FALSE}
+deteccion.no.knn<-rep(0,6)
+deteccion.no.arbol<-rep(0,6)
+deteccion.no.potenciacion<-rep(0,6)
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  no.knn<-0
+  no.arbol<-0
+  no.potenciacion<-0
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- datos[muestra,]
+      taprendizaje <- datos[-muestra,]
+      # SVM
+      modelo <- svm(Income~., data=taprendizaje,kernel ="radial")
+      prediccion <- predict(modelo,ttesting)
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.svm<-no.svm+MC[2,2]
+      # KKNN
+      modelo <- train.kknn(Income~.,data=taprendizaje,kmax=7)
+      prediccion<-predict(modelo,ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.knn<-no.knn+MC[2,2]
+      # Arbol
+      modelo = rpart(Income~.,data=taprendizaje)
+      prediccion <- predict(modelo, ttesting, type='class')
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.arbol<-no.arbol+MC[2,2]    
+      # ADA
+      modelo<-ada(Income~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      no.potenciacion<-no.potenciacion+MC[2,2]          
+   }
+   
+   deteccion.no.knn[i]<-no.knn
+   deteccion.no.arbol[i]<-no.arbol
+   deteccion.no.potenciacion[i]<-no.potenciacion
+
+}
+plot(deteccion.no.knn, col = "magenta", type = "b",  ylim = c(min(deteccion.no.knn,deteccion.no.arbol,deteccion.no.potenciacion), max(deteccion.no.knn,deteccion.no.arbol,deteccion.no.potenciacion)+100), main = "Detecci?n de ingresos 50K", xlab = "N?mero de iteraci?n", ylab = "Cantidad de Ingresos 50K detectados")
+points(deteccion.no.arbol, col = "red", type = "b")
+points(deteccion.no.potenciacion, col = "orange3", type = "b")
+legend("topright", legend = c("KNN","?rbol","Potenciaci?n"), col = c("magenta", "red","orange3"), lty = 1, lwd = 2)
+```
+
+```{r, fig.align='center', warning=FALSE}
+deteccion.error.knn<-rep(0,6)
+deteccion.error.arbol<-rep(0,6)
+deteccion.error.potenciacion<-rep(0,6)
+# Validaci?n cruzada 6 veces
+for(i in 1:6) {
+  grupos <- createFolds(1:n,5) # Crea los 5 grupos
+  error.knn<-0
+  error.arbol<-0
+  error.potenciacion<-0
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 10 grupos (Folds)
+  for(k in 1:5) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- datos[muestra,]
+      taprendizaje <- datos[-muestra,]
+      # KKNN
+      modelo <- train.kknn(Income~.,data=taprendizaje,kmax=7)
+      prediccion<-predict(modelo,ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.knn<-error.knn+(1-(sum(diag(MC)))/sum(MC))*100
+      # Arbol
+      modelo = rpart(Income~.,data=taprendizaje)
+      prediccion <- predict(modelo, ttesting, type='class')
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.arbol<-error.arbol+(1-(sum(diag(MC)))/sum(MC))*100    
+      # Boosting
+      modelo<-ada(Income~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+      prediccion<-predict(modelo, ttesting[,-15])
+      Actual<-ttesting[,15]
+      MC<-table(Actual,prediccion)
+      error.potenciacion<-error.potenciacion+(1-(sum(diag(MC)))/sum(MC))*100      
+   }
+   
+   deteccion.error.knn[i]<-error.knn/6
+   deteccion.error.arbol[i]<-error.arbol/6
+   deteccion.error.potenciacion[i]<-error.potenciacion/6
+}
+plot(deteccion.error.svm, col = "magenta", type = "b",  ylim = c(min(deteccion.error.knn,deteccion.error.arbol,deteccion.error.potenciacion), max(deteccion.error.knn,deteccion.error.arbol,deteccion.error.potenciacion)+3), main = "Detecci?n del ERROR", xlab = "N?mero de iteraci?n", ylab = "ERROR Cometido")
+points(deteccion.error.knn, col = "blue", type = "b")
+points(deteccion.error.arbol, col = "red", type = "b")
+points(deteccion.error.potenciacion, col = "orange3", type = "b")
+legend("topright", legend = c("KNN","?rbol","Potenciaci?n"), col = c("magenta", "blue","red"), lty = 1, lwd = 2)
+```

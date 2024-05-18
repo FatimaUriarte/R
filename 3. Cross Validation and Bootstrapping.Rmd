@@ -1,0 +1,294 @@
+---
+title: "Tarea_3 Metodos Avanzados en Mineria de Datos"
+author: "Fatima Uriarte"
+date: "June 9, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+###Data: Ingresos
+```{r, fig.align='center'}
+rm(list=ls(all=TRUE))  # Borra todas las variables de la memoria
+setwd("C:/Users/uriar/OneDrive/Fátima Uriarte/Fati Files/PROMIDAD Generacion ETA/4. Metodos Avanzados en Mineria de Datos/Clase 3/Tarea3")
+datos <- read.table('DatosIngresos.csv', header=TRUE, sep=';',dec='.') 
+# Recodifica las variables como cualitativas
+datos$workclass <- as.factor(datos$workclass)
+datos$education <- as.factor(datos$education)
+datos$marital.status <- as.factor(datos$marital.status)
+datos$occupation <- as.factor(datos$occupation)
+datos$relationship <- as.factor(datos$relationship)
+datos$race <- as.factor(datos$race)
+datos$sex <- as.factor(datos$sex)
+datos$native.country <- as.factor(datos$native.country)
+datos$Income <- as.factor(datos$Income)
+
+
+```
+## Pregunta 1
+
+### Tabla de aprendizaje y testing
+```{r, fig.align='center'}
+#Tabla de testing y aprendizaje
+N<-dim(datos)[1]
+N
+muestra <- sample(1:N,N*0.7)
+taprendizaje <- datos[muestra,]
+ttesting <- datos[-muestra,]
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(ROCR)))
+```
+### ROC
+```{r, fig.align='center'}
+plotROC <- function(prediccion,real,adicionar=FALSE,color="red") {
+  pred <- prediction(prediccion,real)    
+  perf <- performance(pred,"tpr","fpr")
+  plot(perf,col=color,add=adicionar,main="Curva ROC")
+  segments(0,0,1,1,col='black')
+  grid()  
+}
+areaROC <- function(prediccion,real) {
+  pred <- prediction(prediccion,real)
+  auc<-performance(pred,"auc")
+  return(attributes(auc)$y.values[[1]])
+}
+```
+###M?todo de Naive Bayes
+```{r, fig.align='center'}
+
+modelo_bayes <- naiveBayes(Income~.,data=taprendizaje)
+prediccion_bayes <- predict(modelo_bayes, ttesting[,-15],type="raw")
+score_bayes<-prediccion_bayes[,2]
+clase_bayes<-ttesting$Income
+plotROC(score_bayes,clase_bayes)
+areaROC(score_bayes,clase_bayes)
+```
+###M?quinas de Soporte Vectorial
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+modelo_msv <- svm(Income~., data = taprendizaje, kernel = "linear", probability = TRUE)
+prediccion_msv <- predict(modelo_msv,ttesting, probability = TRUE)
+score_msv <- attributes(prediccion_msv)$probabilities[,2]
+head(attributes(prediccion_msv)$probabilities)
+clase_msv<-ttesting$Income
+plotROC(score_msv,clase_msv)
+areaROC(score_msv,clase_msv)
+```
+###Arboles de decision
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(rpart.plot)))
+modelo_arbol <- rpart(Income~.,data=datos)
+plot(modelo_arbol)
+text(modelo_arbol)
+prediccion_arbol<-predict(modelo_arbol,ttesting,type='prob')
+score_arbol<-prediccion_arbol[,2]
+clase_arbol<-ttesting$Income
+plotROC(score_arbol,clase_arbol)
+areaROC(score_arbol,clase_arbol)
+```
+###Bosques Aleatorios
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(randomForest)))
+modelo_bosques<-randomForest(Income~.,data=taprendizaje,importance=TRUE)
+prediccion_bosques<-predict(modelo_bosques, ttesting[,-15],type="prob")
+score_bosques<-prediccion_bosques[,2]
+clase_bosques<-ttesting$Income
+plotROC(score_bosques,clase_bosques)
+areaROC(score_bosques,clase_bosques)
+```
+###M?todos de Potenciaci?n - Boosting
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(ada)))
+modelo_potenciacion<-ada(Income~.,data=taprendizaje,iter=20,nu=1,type="discrete")
+prediccion_potenciacion<-predict(modelo_potenciacion, ttesting[,-15], type="prob")
+score_potenciacion <- prediccion_potenciacion[,2]
+clase_potenciacion<-ttesting$Income
+plotROC(score_potenciacion,clase_potenciacion)
+areaROC(score_potenciacion,clase_potenciacion)
+```
+###Redes Neuronales
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(nnet)))
+modelo_RN<-nnet(Income~.,data=taprendizaje,size = 25, rang = 0.1,decay = 5e-4, maxit = 1000,MaxNWts =3000,trace=FALSE)
+modelo_RN
+prediccion_RN<-predict(modelo_RN, ttesting[,-15],type = "raw")
+score_RN <- prediccion_RN[,1]
+clase_RN<-ttesting$Income
+plotROC(score_RN,clase_RN)
+areaROC(score_RN,clase_RN)
+```
+
+## Pregunta 2
+###k vecinos mas cercanos
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+## Vamos a generar 5 veces al azar una tabla de testing y una tabla de aprendizaje.
+v.error.tt<-rep(0,5)
+for(i in 1:5) {
+  N<-dim(datos)[1]
+  N
+  muestra <- sample(1:N,N*0.7)
+  taprendizaje <- datos[muestra,]
+  ttesting <- datos[-muestra,]
+  modelo <- train.kknn(Income~.,data=taprendizaje,kmax=25)
+  prediccion <- predict(modelo,ttesting[,-15])
+  ## Matriz de Confusi?n
+  MC<-table(ttesting[,15],prediccion)
+  # Porcentaje de buena clasificacion y de error
+  acierto<-sum(diag(MC))/sum(MC)
+  error <- 1- acierto
+  v.error.tt[i] <- error
+}  
+plot(v.error.tt,col="red",type="b",main="Variaci?n del Error",xlab="N?mero de iteraci?n",ylab="Estimaci?n del Error")
+```
+
+```{r, fig.align='center'}
+
+## Vamos a hacer la predicci?n en toda la tabla de datos.
+v.error.tc<-rep(0,5)
+for(i in 1:5) {
+  modelo <- train.kknn(Income~.,data=datos,kmax=25)
+  prediccion <- predict(modelo,datos[,-15])
+  ## Matriz de Confusion
+  MC<-table(datos[,15],prediccion)
+  # Porcentaje de buena clasificacion y de error
+  acierto<-sum(diag(MC))/sum(MC)
+  error <- 1- acierto
+  v.error.tc[i] <- error
+}  
+```
+
+```{r, fig.align='center'}
+plot(v.error.tt,col="red",type="b",ylim=c(min(v.error.tt,v.error.tc),max(v.error.tt,v.error.tc)+0.05),main="Variaci?n del Error",xlab="N?mero de iteraci?n",ylab="Estimaci?n del Error")
+points(v.error.tc,col="blue",type="b")
+legend("topright",legend=c("Tabla de Testing","Tabla completa"),col=c("red","blue"),lty=1,lwd=1)
+```
+
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+suppressMessages(library(caret)) # Este paquete es usado para generar los grupos al azar
+n <- dim(datos)[1] # Aqu? n=32561
+## Vamos a generar el modelo dejando un grupo para testing y los dem?s datos para aprendizaje.
+v.error.kg<-rep(0,5)
+# Hacemos validaci?n cruzada 10 veces para ver que el error se estabiliza
+for(i in 1:5) {
+  errori <- 0
+  # Esta instrucci?n genera los k=5 grupos (Folds)
+  grupos <- createFolds(1:n,10) # grupos$Fold0i es el i-?simo grupo  
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:10) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- datos[muestra,]
+      taprendizaje <- datos[-muestra,]
+      modelo <- train.kknn(Income~.,data=taprendizaje,kmax=25)
+      prediccion <- predict(modelo,ttesting[,-15])
+      ## Matriz de Confusi?n
+      MC<-table(ttesting[,15],prediccion)
+      # Porcentaje de buena clasificaci?n y de error
+      acierto<-sum(diag(MC))/sum(MC)
+      error <- 1 - acierto
+      errori <- errori + error
+  } 
+  v.error.kg[i] <- errori/5
+}
+
+```
+
+```{r, fig.align='center'}
+plot(v.error.kg, col = "magenta", type = "b", ylim = c(min(v.error.tc), max(v.error.kg) + 0.02), main = "Variaci?n del Error", xlab = "N?mero de iteraci?n", 
+    ylab = "Estimaci?n del Error")
+points(v.error.tc,col="blue",type="b")
+points(v.error.tt, col = "red", type = "b")
+legend("bottom", inset = 0.5, legend = c("Tabla Completa","Tabla de Testing","Promedio uno afuera"), col = c("magenta", "blue","red"), lty = 1, lwd = 1)
+```
+
+###Redes Neuronales
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(nnet)))
+## Vamos a generar 5 veces al azar una tabla de testing y una tabla de aprendizaje.
+v.error.tt<-rep(0,5)
+for(i in 1:5) {
+  N<-dim(datos)[1]
+  N
+  muestra <- sample(1:N,N*0.7)
+  taprendizaje <- datos[muestra,]
+  ttesting <- datos[-muestra,]
+  modelo<-nnet(Income~.,data=taprendizaje,size = 25, rang = 0.1,decay = 5e-4, maxit = 1000,MaxNWts =3000,trace=FALSE)
+modelo
+  prediccion<-predict(modelo, ttesting[,-15],type = "raw")
+  ## Matriz de Confusi?n
+  MC<-table(ttesting[,15],prediccion)
+  # Porcentaje de buena clasificacion y de error
+  acierto<-sum(diag(MC))/sum(MC)
+  error <- 1- acierto
+  v.error.tt[i] <- error
+}  
+plot(v.error.tt,col="red",type="b",main="Variaci?n del Error",xlab="N?mero de iteraci?n",ylab="Estimaci?n del Error")
+```
+
+```{r, fig.align='center'}
+
+## Vamos a hacer la predicci?n en toda la tabla de datos.
+v.error.tc<-rep(0,5)
+for(i in 1:5) {
+  modelo<-nnet(Income~.,data=taprendizaje,size = 25, rang = 0.1,decay = 5e-4, maxit = 1000,MaxNWts =3000,trace=FALSE)
+  prediccion<-predict(modelo, ttesting[,-15],type = "class")
+  ## Matriz de Confusion
+  MC<-table(ttesting$Income,prediccion)
+  # Porcentaje de buena clasificacion y de error
+  acierto<-sum(diag(MC))/sum(MC)
+  error <- 1- acierto
+  v.error.tc[i] <- error
+}  
+```
+
+```{r, fig.align='center'}
+plot(v.error.tt,col="red",type="b",ylim=c(min(v.error.tt,v.error.tc),max(v.error.tt,v.error.tc)+0.05),main="Variaci?n del Error",xlab="N?mero de iteraci?n",ylab="Estimaci?n del Error")
+points(v.error.tc,col="blue",type="b")
+legend("topright",legend=c("Tabla de Testing","Tabla completa"),col=c("red","blue"),lty=1,lwd=1)
+```
+
+```{r, fig.align='center'}
+suppressWarnings(suppressMessages(library(kknn)))
+suppressMessages(library(caret)) # Este paquete es usado para generar los grupos al azar
+n <- dim(datos)[1] # Aqu? n=32561
+## Vamos a generar el modelo dejando un grupo para testing y los dem?s datos para aprendizaje.
+v.error.kg<-rep(0,5)
+# Hacemos validaci?n cruzada 10 veces para ver que el error se estabiliza
+for(i in 1:5) {
+  errori <- 0
+  # Esta instrucci?n genera los k=5 grupos (Folds)
+  grupos <- createFolds(1:n,10) # grupos$Fold0i es el i-?simo grupo  
+  # Este ciclo es el que hace "cross-validation" (validaci?n cruzada) con 5 grupos (Folds)
+  for(k in 1:10) {    
+      muestra <- grupos[[k]] # Por ser una lista requiere de doble par?ntesis
+      ttesting <- datos[muestra,]
+      taprendizaje <- datos[-muestra,]
+      modelo<-nnet(Income~.,data=taprendizaje,size = 25, rang = 0.1,decay = 5e-4, maxit = 1000,MaxNWts =3000,trace=FALSE)
+modelo
+  prediccion<-predict(modelo, ttesting[,-15],type = "raw")
+      ## Matriz de Confusi?n
+      MC<-table(ttesting[,15],prediccion)
+      # Porcentaje de buena clasificaci?n y de error
+      acierto<-sum(diag(MC))/sum(MC)
+      error <- 1 - acierto
+      errori <- errori + error
+  } 
+  v.error.kg[i] <- errori/5
+}
+
+```
+
+```{r, fig.align='center'}
+plot(v.error.kg, col = "magenta", type = "b", ylim = c(min(v.error.tc), max(v.error.kg) + 0.02), main = "Variaci?n del Error", xlab = "N?mero de iteraci?n", 
+    ylab = "Estimaci?n del Error")
+points(v.error.tc,col="blue",type="b")
+points(v.error.tt, col = "red", type = "b")
+legend("topleft", inset = 0.01, legend = c("Tabla Completa","Tabla de Testing","Promedio uno afuera"), col = c("magenta", "blue","red"), lty = 1, lwd = 1)
+```

@@ -1,0 +1,359 @@
+---
+title: "Tarea1_fatima_uriarte"
+author: "Fatima Uriarte"
+date: "27 de julio de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7}
+#Fijamos directorio
+setwd("C:/Documentos-SBS/Fatima Uriarte/Cursos/1. Curso Experto en Mineria de Datos - PROMIDAT/6. Predicción de Inventaros de Series de Tiempo/Clase1/Tarea1")
+
+#Cargamos las librerias
+suppressMessages(library(nortest))
+suppressMessages(library(itsmr))
+suppressMessages(library(dygraphs))
+suppressMessages(library(magrittr))
+suppressMessages(library(dplyr)) ##"%>%"
+suppressMessages(library(lubridate))
+suppressMessages(library(xts))
+suppressMessages(library(timeDate))
+suppressMessages(library(quantmod))
+suppressMessages(library(timeDate))
+```
+
+
+####**Pregunta 1**
+#####Explique porque los datos de la tabla incluida en el archivo OilPrice.csv no son una serie de tiempo?
+
+#####Los datos de la tabla OilPrice.csv no constituyen una serie de tiempo porque faltan varios dias.
+
+####**Pregunta 2**
+#####Para los datos sobre la "Produccion industrial de Australia por trimestre" que va del 4to trimestre de 1975 al 3er trimestre de 1991 que está en el archivo Producción industrial de Australia por trimestre.csv realice los siguiente:
+
+##### a) Conviertala en Serie de Tiempo y grafique usando el comando plot de R.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE}
+datos<-read.csv("Producción industrial de Australia por trimestre.csv", sep=";",dec = ".", header = TRUE)
+datos<-t(datos[-1])#Transponemos y quitamos las etiquetas
+plot(datos[,1],type="l", main="Producción Industrial de Australia", xlab="Trimestre", ylab="Producción Industrial")
+```
+
+##### b) Usando todos los tipos de test vistos en clase verique la normalidad de los residuos de esta serie.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+## Test chi-square de Pearson
+nortest::pearson.test(datos)
+## Test Lilliefors (Kolmogorov-Smirnov)
+nortest::lillie.test(datos)
+## Test de Cramer-von Mises
+nortest::cvm.test(datos)
+```
+
+####### Los tres test nos dan un p-value<=0.05 por lo que existe evidencia estadística para rechazar Ho. Es decir, no podemos afirmar que la "serie" sigue una distribución normal.
+
+##### c) Realice un suavizado lineal usando a = 4 y a = 6 grafique usando el comando plot de R.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+plot(datos[,1],type="l", main="Producción Industrial de Australia", xlab="Trimestre", ylab="Producción Industrial")
+st.1 <- stats::filter(datos[,1],filter=rep(1/9,9))
+st.2 <- stats::filter(datos[,1],filter=rep(1/13,13))
+lines(st.1,col="red")
+lines(st.2,col="blue")
+legend("topleft", inset=.05,	c("Serie", "Suav. 4","Suav. 6"), fill=c("black", "red", "blue"), horiz=FALSE, box.lty=0)
+```
+
+####**Pregunta 3**
+#####Repita el ejercicio anterior para los datos en el archivo CO2.csv, usando la columna CO2 la cual consiste de las concentraciones mensuales de CO2 de Mauna Loa en micro mol de CO2 por mol (ppm). Se tienen datos en el archivo desde enero de 1958 hasta diciembre del 2017, pero se deben usar solamente los datos desde enero de 1965 hasta octubre de 2017.
+
+##### a) Conviertala en Serie de Tiempo y grafique usando el comando plot de R.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE}
+datos<-read.csv("CO2.csv", sep=",",dec = ".", header = TRUE)
+datos_co2<-datos[85:718,5]
+plot(datos_co2,type="l")
+```
+
+##### b) Usando todos los tipos de test vistos en clase verique la normalidad de los residuos de esta serie.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+## Test chi-square de Pearson
+nortest::pearson.test(datos_co2)
+## Test Lilliefors (Kolmogorov-Smirnov)
+nortest::lillie.test(datos_co2)
+## Test de Cramer-von Mises
+nortest::cvm.test(datos_co2)
+```
+
+####### Los tres test nos dan un p-value<=0.05 por lo que existe evidencia estadística para rechazar Ho. Es decir, no podemos afirmar que la "serie" sigue una distribución normal.
+
+##### c) Realice un suavizado lineal usando a = 4 y a = 6 grafique usando el comando plot de R.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+plot(datos_co2,type="l", ylab = 'Emisiones', main = 'Emisiones CO2')
+st.1 <- stats::filter(datos_co2,filter=rep(1/9,9))
+st.2 <- stats::filter(datos_co2,filter=rep(1/13,13))
+lines(st.1,col="red")
+lines(st.2,col="blue")
+legend("topleft", inset=.05,	c("Serie", "Suav. 4","Suav. 6"), fill=c("black", "red", "blue"), horiz=FALSE, box.lty=0)
+```
+
+####**Pregunta 4**
+#####Convierta en series de tiempo los siguientes datos del paquete itsmr; luego grafique usando el comando plot de R y el paquete dygraphs:
+
+* #####dowj (78 Dow Jones utilities index, August 28 to December 18, 1972)
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+fechas.todas <- seq(as.Date("1972-8-28"), as.Date("1972-12-18"), by = "day")
+dia.sem <- rep(1:7,length = length(fechas.todas))
+fechas.weekdays <- fechas.todas[-which(dia.sem == 6 | dia.sem == 7)]
+festivos <- as.Date(holidayNYSE(1972))
+fechas.mercado <- fechas.weekdays[!fechas.weekdays %in% festivos]
+dowj <-itsmr::dowj 
+dowj.ts <-ts(dowj)
+dowj.xts <- xts(dowj.ts,fechas.mercado)
+dygraph(dowj.xts, ylab = 'USD por acción', main = 'Dow Jones') %>%
+dySeries('V1',label="Precio")%>%
+dyRangeSelector(height = 20)%>%
+dyOptions(drawPoints = TRUE, pointSize = 2)
+  
+plot(dowj.ts,type="o",col="red", ylab = 'USD por acción', main = 'Dow Jones')
+```
+
+* #####strikes (30 USA union strikes, 1951 to 1980)
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+strikes<-ts(strikes,start=c(1951,1),freq=1)
+plot(strikes,type="o",col="red", ylab = 'USD por acción', main = 'Strikes')
+dygraph(strikes, ylab = 'USD por acción', main = 'Strikes') %>%dyOptions(drawPoints = TRUE, pointSize = 2)%>%
+dySeries('V1',label="Precio")%>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+```
+
+* #####Sunspots (100 Number of sunspots, 1770 to 1869)
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+Sunspots<-ts(Sunspots,start=c(1770,1),freq=1)
+plot(Sunspots,type="o",col="red", ylab = 'USD por acción', main = 'Sunspots')
+dygraph(Sunspots, ylab = 'USD por acción', main = 'Sunspots') %>%dyOptions(drawPoints = TRUE, pointSize = 2)%>%
+dySeries('V1',label="Precio")%>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+```
+
+* #####wine (142 Australian red wine sales, January 1980 to October 1991)
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+wine<-ts(wine,start=c(1980,1),freq=12)
+plot(wine,type="o",col="red", ylab = 'USD por acción', main = 'Wine')
+dygraph(wine, ylab = 'USD por acción', main = 'Wine') %>%dyOptions(drawPoints = TRUE, pointSize = 2)%>%
+dySeries('V1',label="Precio")%>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+```
+
+####**Pregunta 5**
+#####Para los datos en el archivo Tipo de cambio USA-CR.csv que contiene el tipo de cambio entre el dolar estadounidense y el colón costarricense desde el 1/1/1983 hasta el 28/11/2017 realice lo siguiente:
+
+##### a) Conviertala en Serie de Tiempo y grafique usando el comando plot de R y el paquete dygraphs.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE}
+datos<-read.csv("Tipo de cambio USA-CR.csv", sep=";",dec = ",", header = TRUE)
+fecha.inicio <- ymd("1982-12-31")
+fechas <- fecha.inicio + days(1:12751) ## tambi?n se puede usar months, years
+
+datos_tc<- xts(datos[,2:3],fechas)
+plot(datos_tc,type="l", ylab = 'Colón por USD', main = 'Tipo de Cambio en Costa Rica')
+dygraph(datos_tc, "Tipo de Cambio en Costa Rica") %>% dyOptions(drawPoints = TRUE, pointSize = 1)%>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+
+```
+
+##### b) Para ambas series realice un suavizado lineal usando a = 4, a = 6 y a = 10. Grafique usando el comando plot de R y el paquete dygraphs.
+
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+####Compra
+compra<-ts(datos_tc[,1],start=c(1983,1),freq=365)
+plot(compra,type="l", ylab = 'Colón por USD', main = 'Tipo de Cambio Compra')
+st.1 <- stats::filter(compra,filter=rep(1/9,9))
+st.2 <- stats::filter(compra,filter=rep(1/13,13))
+st.3 <- stats::filter(compra,filter=rep(1/21,21))
+lines(st.1,col="red")
+lines(st.2,col="blue")
+lines(st.3,col="purple")
+
+compra_xts=xts(datos_tc[,1], frequency=365 )
+st.1 <- xts(st.1, fechas)
+st.2 <- xts(st.2, fechas)
+st.3 <- xts(st.3, fechas)
+conj=cbind(compra_xts,st.1, st.2, st.3 )
+dygraph(conj, ylab = 'Colón por USD', main = 'Tipo de Cambio Compra')%>% 
+dySeries("COMPRA",label="TCC") %>%
+dySeries("..2",label="TCC_S4") %>%
+dySeries("..3",label="TCC_S6") %>%
+dySeries("..4",label="TCC_S10") %>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+
+####Venta
+venta<-ts(datos_tc[,2],start=c(1983,1),freq=365)
+plot(venta,type="l", ylab = 'Colón por USD', main = 'Tipo de Cambio Venta')
+st.1 <- stats::filter(venta,filter=rep(1/9,9))
+st.2 <- stats::filter(venta,filter=rep(1/13,13))
+st.3 <- stats::filter(venta,filter=rep(1/21,21))
+lines(st.1,col="red")
+lines(st.2,col="blue")
+lines(st.3,col="purple")
+
+venta_xts=xts(datos_tc[,2], frequency=365 )
+st.1 <- xts(st.1, fechas)
+st.2 <- xts(st.2, fechas)
+st.3 <- xts(st.3, fechas)
+conj=cbind(venta_xts,st.1, st.2, st.3 )
+dygraph(conj, ylab = 'Colón por USD', main = 'Tipo de Cambio Venta')%>% 
+dySeries("VENTA",label="TCV") %>%
+dySeries("..2",label="TCV_S4") %>%
+dySeries("..3",label="TCV_S6") %>%
+dySeries("..4",label="TCV_S10") %>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+```
+
+##### c) Para ambas series realice una descomposición (tendencia, ciclo, estacionalidad y aleatoriedad).
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+s<-stl(compra[, 1],s.window="periodic")
+plot(s,s.window="periodic", main="Descomposición de la Serie")
+v<-stl(venta[, 1],s.window="periodic")
+plot(v,s.window="periodic", main="Descomposición de la Serie")
+```
+
+####**Pregunta 6**
+#####En el sitio de Yahoo Finance se pueden bajas los precios de las acciones de las compañías más importantes del mundo.
+
+##### a) Baje los precios de las acciones de CISCO de la siguientes dirección. Debe bajar datos de al menos dos años, como se muestra en la siguiente Figura:
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+CSCO<-read.csv("CSCO.csv", sep=",",dec = ".", header = TRUE)
+```
+
+
+##### b) Realice un suavizado lineal para la serie en precio de apertura (Open) usando filtros de a = 3, a = 13 y a = 41 elementos. Grafique lo anterior usando el comando plot de R y el paquete dygraphs.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+##Eliminar fines de semana y feriados
+fechas <- seq(as.Date("2015-08-03"), as.Date("2017-08-02"), by = "day")
+fechas.filtradas <- fechas[ !weekdays(fechas) %in% c("sábado","domingo")]
+fechas.filtradas <- fechas.filtradas[!fechas.filtradas %in% as_date(holidayNYSE(2015))]
+fechas.filtradas <- fechas.filtradas[!fechas.filtradas %in% as_date(holidayNYSE(2016))]
+fechas.filtradas <- fechas.filtradas[!fechas.filtradas %in% as_date(holidayNYSE(2017))]
+# Gráfico plot
+CSCO.ts <-ts(CSCO[,2])
+st.1 <- stats::filter(CSCO.ts,filter=rep(1/7,7))
+st.2 <- stats::filter(CSCO.ts,filter=rep(1/27,27))
+st.3 <- stats::filter(CSCO.ts,filter=rep(1/83,83))
+plot(CSCO.ts,type="l", ylab = 'USD por acción', main = 'Precios de las acciones de CISCO')
+lines(st.1,col="red")
+lines(st.2,col="blue")
+lines(st.3,col="purple")
+# Gráfico dygraph
+CSCO.xts <- xts(CSCO.ts,fechas.filtradas)
+st.1 <- xts(st.1, fechas.filtradas )
+st.2 <- xts(st.2, fechas.filtradas )
+st.3 <- xts(st.3, fechas.filtradas)
+conj=cbind(CSCO.xts,st.1, st.2, st.3 )
+dygraph(conj, ylab = 'USD por acción', main = 'Precios de las acciones de CISCO') %>%
+dySeries("..1",label="CSCO") %>%
+dySeries("..2",label="CSCO_S3") %>%
+dySeries("..3",label="CSCO_S13") %>%
+dySeries("..4",label="CSCO_S41") %>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+
+```
+
+##### c) Repita el ejercicio anterior con la serie de INTEL, pero esta vez usando el paquete quantmod para descargar la serie de tiempo del precio de las acciones de INTEL (el nombre con que debe llamar a esta serie es INTC) desde el 2017-01-01 al 2018-07-24, es decir, realice un suavizado lineal para ambas series en precio de apertura (Open) usando filtro de a = 3, a = 13 y a = 41 elementos. Grafique lo anterior usando el comando plot de R y el paquete dygraphs.
+
+##### Lamentablemente no pude utilizar el paquete quantmod porque me apareció este error: Error in curl::curl_download(cu, tmp, handle = h) : Failed to connect to finance.yahoo.com port 443: Timed out, por lo que descargué la serie de manera tradicional.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+startDate = as.Date("2017-01-01") #Inicio del  periodo que deseamos saber los precios de las acciones
+endDate = as.Date("2018-07-24") #Fin del  periodo que deseamos saber los precios de las acciones
+#getSymbols("INTC", from = startDate, to = endDate) 
+#Archivo
+INTC<-read.csv("INTC.csv", sep=",",dec = ".", header = TRUE)
+##Eliminar fines de semana y feriados
+fechas <- seq(as.Date("2017-01-03"), as.Date("2018-07-24"), by = "day")
+fechas.filtradas <- fechas[!weekdays(fechas) %in% c("sábado","domingo")]
+fechas.filtradas <- fechas.filtradas[!fechas.filtradas %in% as_date(holidayNYSE(2017))]
+fechas.filtradas <- fechas.filtradas[!fechas.filtradas %in% as_date(holidayNYSE(2018))]
+# Gráfico plot
+INTC.ts <-ts(INTC[,2])
+st.1 <- stats::filter(INTC.ts,filter=rep(1/7,7))
+st.2 <- stats::filter(INTC.ts,filter=rep(1/27,27))
+st.3 <- stats::filter(INTC.ts,filter=rep(1/83,83))
+plot(INTC.ts,type="l", ylab = 'USD por acción', main = 'INTC')
+lines(st.1,col="red")
+lines(st.2,col="blue")
+lines(st.3,col="purple")
+# Gráfico dygraph
+INTC.xts <- xts(INTC.ts,fechas.filtradas)
+st.1 <- xts(st.1, fechas.filtradas )
+st.2 <- xts(st.2, fechas.filtradas )
+st.3 <- xts(st.3, fechas.filtradas)
+conj=cbind(INTC.xts,st.1, st.2, st.3 )
+dygraph(conj, ylab = 'USD por acción', main = 'INTC') %>%
+dySeries("..1",label="INTC") %>%
+dySeries("..2",label="INTC_S3") %>%
+dySeries("..3",label="INTC_S13") %>%
+dySeries("..4",label="INTC_S41") %>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+```
+
+##### d) Porque la frecuencia de estas series debe ser 260 y no 365?
+
+Las frecuencias de estas series son diferentes porque no existe venta y compra de acciones los fines de semana ni los feriados.
+
+####**Pregunta 7**
+#####Con datos propios, idealmente de su trabajo, encuentre una serie de tiempo, explique en qué consiste, transformela en un archivo csv, usando R conviertala en una serie de tiempo, realice un test de normalidad de los residuos y normalmente construya una descomposición de esta serie (tendencia, ciclo, estacionalidad y aleatoriedad).
+
+##### vamos a trabajar con la serie de tiempo que representa la morosidad del sistema financiero peruano.La morosidad es el porcentaje de los créditos directos que se encuentra en situación de vencido o en cobranza judicial. El criterio de la SBS para considerar un crédito en situación de vencido, depende del número de días de atraso según el tipo de crédito: para los créditos corporativos, a grandes y a medianas empresas cuando el atraso supera los 15 días; para los créditos a pequeñas y microempresas los 30 días; y para los créditos hipotecarios y de consumo, a los 30 días de atraso se considera la cuota como vencida y a los 90 días de atraso el saldo total.
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+MOROSIDAD<-read.csv("MorosidadSF.csv", sep=";",dec = ".", header = TRUE)
+#Serie de Tiempo en R
+MOROSIDAD.ts<-ts(MOROSIDAD[,3],start=c(2001,1),freq=12)
+plot(MOROSIDAD.ts,type="l", ylab = '%', main = 'Morosidad del Sistema Financiero Peruano')
+fechas <- seq(as.Date("2001-01-30"), as.Date("2017-09-30"), by = "month")
+MOROSIDAD.xts=xts(MOROSIDAD.ts, fechas )
+dygraph(MOROSIDAD.xts, ylab = '%', main = 'Morosidad del Sistema Financiero Peruano')%>% dyOptions(drawPoints = TRUE, pointSize = 1)%>%
+dyRangeSelector(height = 20, strokeColor = "") %>%
+dyRangeSelector(fillColor = "black",strokeColor="black" )
+
+```
+
+#####Test de normalidad de Residuos
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+#Test chi-square de Pearson
+nortest::pearson.test(MOROSIDAD[,3])
+#Test Lilliefors (Kolmogorov-Smirnov)
+nortest::lillie.test(MOROSIDAD[,3])
+#Test de Cramer-von Mises
+nortest::cvm.test(MOROSIDAD[,3])
+```
+
+####### Los tres test nos dan un p-value<=0.05 por lo que existe evidencia estadística para rechazar Ho. Es decir, no podemos afirmar que la "serie" sigue una distribución normal.
+
+#####Descomposición de Residuos
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=TRUE, comment="", results="asis", message=FALSE}
+s<-stl(MOROSIDAD.ts,s.window="periodic")
+plot(s,s.window="periodic", main="Descomposición de la Serie")
+```

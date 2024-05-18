@@ -1,0 +1,107 @@
+---
+title: "Tarea4_fatima_uriarte"
+author: "Fatima Uriarte"
+date: "14 de julio de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7}
+#Cargamos las librerias
+suppressMessages(library(shiny))
+suppressMessages(library(ggplot2))
+suppressMessages(library(scales))
+suppressMessages(library(plotly))
+```
+
+##Aplicación Shiny
+
+```{r, fig.align='center', warning=FALSE,fig.width=10, fig.height=7, eval=FALSE}
+ui <- pageWithSidebar(
+  headerPanel = headerPanel(title = "Gráficos: Tarjeta de Crédito"),
+  sidebarPanel = sidebarPanel(
+    selectInput(inputId = 'var', label = 'Variable', choices = c('Tasa de Interes'='tea',Línea='linea', Saldo='kvi')),
+    selectInput(inputId = 'entidad', label = 'Entidad', choices = c(Crédito=1,Interbank=2,Continental=6, BanBif=55,Falabella=142,Ripley=73,F.Uno=145,Cencosud=129, Azteca=140)),
+    selectInput(inputId = 'tipo', label = 'Tipo de Deudor', choices = c('Antiguo', 'Nuevo'))
+  ),
+  mainPanel = mainPanel(
+    tabsetPanel(type = "tabs",
+                tabPanel("Histograma",plotOutput(outputId = 'plot1')),
+                tabPanel("Densidad",plotOutput(outputId = 'plot2')),
+                tabPanel("Boxplot",plotlyOutput(outputId = 'plot3'))
+    ))
+  )
+
+server <- function(input,output){
+  
+  #creamos una tabla con las variables seleccionadas
+  tea_tc <- read.csv(file = "tea_tc.csv", sep ="," ) 
+  tea_tc <- na.omit (tea_tc) #eliminamos valores perdidos
+  grafico1 <- reactive({
+      datos <- subset(tea_tc,ENT_NCOD==input$entidad)
+      datos2 <- subset(datos,tipo_deudor==input$tipo)
+      ggplot(data = datos2, mapping = aes_string(x = input$var))  + #variable tea
+      geom_histogram( aes(y=..count../sum(..count..)))+ #histograma
+      theme_minimal()+ #gráfico más limpio
+      labs(
+        # Fuente
+        caption = "Fuente: SBS",
+        # Etiquete eje y
+        y = "Distribución Porcentual")+ 
+      scale_y_continuous(labels = percent_format()) #formato de % eje Y
+  })
+  
+  grafico2 <- reactive({
+      datos <- subset(tea_tc,ENT_NCOD==input$entidad)
+      datos2 <- subset(datos,tipo_deudor==input$tipo)
+      ggplot(data = datos2, mapping = aes_string(x = input$var))  + #variable tea
+      geom_density( aes(y=..count../sum(..count..)))+ #histograma
+      theme_minimal()+ #gráfico más limpio
+      labs(
+        # Fuente
+        caption = "Fuente: SBS",
+        # Etiquete eje y
+        y = "Distribución Porcentual")+ 
+      scale_y_continuous(labels = percent_format()) #formato de % eje Y
+  })
+  
+  grafico3 <- reactive({
+    datos <- subset(tea_tc,ENT_NCOD==input$entidad)
+    datos2 <- subset(datos,tipo_deudor==input$tipo)
+    g<-ggplot(data = datos2, mapping = aes_string(y = input$var))  +
+      geom_boxplot()+
+      theme_minimal() + #gráfico más limpio
+      labs(
+        # Fuente
+        caption = "Fuente: SBS"
+        )+ 
+      guides(fill=guide_legend(title=NULL))+
+      theme(legend.title=element_blank())
+    #g
+    ggplotly(g)
+  })
+  
+  output$plot1 <- renderPlot({
+    grafico1()
+  })
+  
+  output$plot2 <- renderPlot({
+    grafico2()
+  })
+  output$plot3 <- renderPlotly({
+    grafico3()
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+##Resultados Aplicación Shiny
+
+![](Histograma.png)
+![](Densidad.png)
+![](Boxplot.png)
